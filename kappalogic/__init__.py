@@ -14,7 +14,10 @@ from .quantum_well import (
     box_heat_kernel, box_heat_kernel_eigen,
     infinite_well_propagator, infinite_well_propagator_eigen,
 )
-from .search import soft_gt, soft_eq, soft_or, soft_and, anneal_solve, numeric_grad, l2_penalty
+from .search import (
+    soft_gt, soft_eq, soft_or, soft_and, anneal_solve, numeric_grad, l2_penalty,
+    is_dont_care_variable, find_dont_care_variables,
+)
 from .field_theory import kink_profile, kink_eom_residual, kink_energy_exact, topological_charge
 from .stat_mech import box_partition_function, box_partition_function_exact, witten_index_toy
 from .info_theory import (
@@ -30,6 +33,7 @@ from .electronic_structure import (
     tight_binding_dos_continuum, continuum_filling, continuum_energy, continuum_find_mu,
 )
 from .theory import max_gradient_location, max_gradient_value, is_single_passing_at_zero, fusion_is_safe
+from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
 
 __all__ = [
     "sgn", "reg", "NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "AND_n", "OR_n",
@@ -43,6 +47,7 @@ __all__ = [
     "box_heat_kernel", "box_heat_kernel_eigen",
     "infinite_well_propagator", "infinite_well_propagator_eigen",
     "soft_gt", "soft_eq", "soft_or", "soft_and", "anneal_solve", "numeric_grad", "l2_penalty",
+    "is_dont_care_variable", "find_dont_care_variables",
     "kink_profile", "kink_eom_residual", "kink_energy_exact", "topological_charge",
     "box_partition_function", "box_partition_function_exact", "witten_index_toy",
     "gaussian_variance", "differential_entropy_gaussian",
@@ -54,6 +59,7 @@ __all__ = [
     "find_chemical_potential", "total_energy_smeared",
     "tight_binding_dos_continuum", "continuum_filling", "continuum_energy", "continuum_find_mu",
     "max_gradient_location", "max_gradient_value", "is_single_passing_at_zero", "fusion_is_safe",
+    "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
 ]
 
-__version__ = "0.9.0"
+__version__ = "0.12.0"

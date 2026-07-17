@@ -3,7 +3,7 @@ import pytest
 from kappalogic import (
     sgn, reg, gt, lt, AND, AND_n, OR, OR_n,
     xi_of_time, time_of_xi, heat_step_profile, gaussian_match,
-    soft_gt, soft_or, soft_and, anneal_solve, l2_penalty,
+    soft_gt, soft_or, soft_and, anneal_solve, l2_penalty, find_dont_care_variables,
     box_heat_kernel, box_heat_kernel_eigen,
     infinite_well_propagator, infinite_well_propagator_eigen,
 )
@@ -124,3 +124,32 @@ def test_l2_penalty_stabilizes_anneal_solve():
     # 両方とも制約は満たすが、正則化ありの方が原点に近い(暴走しない)
     assert abs(result_reg[0] + result_reg[1] - 5) < 0.1
     assert np.sum(result_reg ** 2) <= np.sum(result_noreg ** 2) + 1e-6
+
+
+def _sat_clauses_only(x, xi):
+    x1, x2, x3 = x
+    c1 = soft_or([x1, x2, x3], xi)
+    c2 = soft_or([-x1, x2], xi)
+    c3 = soft_or([-x2, -x3], xi)
+    c4 = soft_or([x1, -x3], xi)
+    return soft_or([-c1, -c2, -c3, -c4], xi) * -1
+
+
+def test_find_dont_care_variables_detects_free_variable():
+    # x2>0, x3<0 だけで全節が満たされ、x1はどちらでもよい("don't care")
+    x = np.array([0.0001, 12.5, -12.4])
+    dont_care = find_dont_care_variables(x, _sat_clauses_only)
+    assert 0 in dont_care  # x1(index 0)がdon't careとして検出される
+
+
+def test_find_dont_care_variables_no_false_positive_when_all_essential():
+    def all_essential_clauses(x, xi):
+        x1, x2, x3 = x
+        c1 = soft_or([x1], xi)
+        c2 = soft_or([x2], xi)
+        c3 = soft_or([x3], xi)
+        return soft_or([-c1, -c2, -c3], xi) * -1
+
+    x = np.array([3.0, 4.0, 5.0])  # 全変数が真である必要がある(全部本質的)
+    dont_care = find_dont_care_variables(x, all_essential_clauses)
+    assert dont_care == []

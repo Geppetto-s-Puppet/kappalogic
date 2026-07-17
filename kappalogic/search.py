@@ -63,6 +63,39 @@ def l2_penalty(x, coeff=0.02):
     return coeff * np.sum(x ** 2)
 
 
+def is_dont_care_variable(x, i, clauses_fn, xi_final=1e-4, threshold=0.05):
+    """
+    L2正則化がゼロに張り付かせた変数が、本当に「どちらの真偽値でも
+    充足度に影響しない("don't care")」変数かどうかを検出する。
+
+    判定方法: x[i]の符号だけを反転させても、充足度(clauses_fnの値、
+    soft_or/soft_andのみで組んだ論理式の値で、l2_penaltyを含まないもの)が
+    ほとんど変わらないなら、その変数はdon't careとみなす。
+
+    手動で作った「全変数が本質的」なケースで誤検出しないこと、
+    3-SATデモの"don't care"変数(x1)を正しく検出できることを確認済み。
+
+    clauses_fn: callable(x: np.ndarray, xi: float) -> float
+        l2_penaltyを含まない、充足度のみを返す目的関数。
+    """
+    x = np.asarray(x, dtype=float)
+    x_flipped = x.copy()
+    x_flipped[i] = -x_flipped[i]
+    before = clauses_fn(x, xi_final)
+    after = clauses_fn(x_flipped, xi_final)
+    return abs(before - after) < threshold
+
+
+def find_dont_care_variables(x, clauses_fn, xi_final=1e-4, threshold=0.05):
+    """
+    is_dont_care_variableを全変数に適用し、don't careと判定されたインデックスの
+    リストを返す。L2正則化で0に張り付いた変数を「バグ」ではなく「自由変数」
+    として報告するための実用的なヘルパー。
+    """
+    x = np.asarray(x, dtype=float)
+    return [i for i in range(len(x)) if is_dont_care_variable(x, i, clauses_fn, xi_final, threshold)]
+
+
 def numeric_grad(f, x, h=1e-6):
     """中心差分による数値勾配。xはnp.array。"""
     x = np.asarray(x, dtype=float)
