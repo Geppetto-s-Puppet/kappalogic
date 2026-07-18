@@ -156,11 +156,18 @@ OR側の"第二の"共鳴点はxi*log(1/xi)という対数補正つきでしか
 
 正直な限界: この closed form は xi->0 の漸近極限で導出したもので、
 有限のxiでは(数値検証の通り)小さいがゼロでない誤差がある。
-また、cを固定したときの話であり、a自体を動かした場合の全体像
-(a,bの2変数空間での本当の"危険領域"の形)はまだ描けていない。
-それでも、「なぜORの方がANDより広い範囲で危険なのか」
-(命題4の勾配地形の表)を、対数補正という具体的な形で
-定量的に説明できたのは今回の収穫。
+
+**(v0.26追記)** 当初は「cを固定したときの話であり、a自体を動かした
+場合の全体像(a,bの2変数空間での本当の"危険領域"の形)はまだ描けて
+いない」と書いていたが、これは誤解だった。実はor_second_resonance_
+locationをcの**連続関数**として使えば、それがそのまま
+(a,b)平面上の|grad OR|=sqrt((dOR/da)^2+(dOR/db)^2)の**真の尾根**に
+なっている(数値精度10^-6〜10^-10のオーダーで一致することを確認、
+`or_full_gradient_magnitude_argmax`参照)。v0.18で「近似曲線
+(1-reg(a))(1-reg(b))=xi*u*は数%〜十数%の誤差でしか尾根に近似
+できない」としていたが、命題6の閉形式を使えばこの誤差はほぼ解消
+される。つまり命題6は、2変数空間の真の危険領域の形も(cを動かす
+ことで)すでに与えていた、ということになる。
 
 【命題8(v0.19, ORの"誤分類領域": u+vの対数閾値)】
 命題6・v0.18の危険地図をさらに追いかけていて、勾配の話ではなく
@@ -312,6 +319,234 @@ sympyやペンと紙で追い切る形の証明)までは行っていない
 微分可能論理ゲート分野で本当に新規かどうかは断定しない。
 それでも、v0.13から続いていた具体的な空白を、閉じた形の式で
 埋められたことは、今回の一番の収穫だと思う。
+
+【命題11(v0.24): 6ゲートの分類——AND型かOR型か】
+TODO.mdで積み残していた「XOR/NAND/NORなど他ゲートが、AND型
+(a*b/xiという1変数に還元できる、命題5)かOR型(できない)か」を
+調べた。core.pyの6ゲート全部について、命題5の部分ディレーション
+不変性(gate(lam*a,b;lam*xi)==gate(a,b;xi))をsympy・数値の両方で
+チェックしたところ:
+
+    AND                        : 満たす(AND型)
+    NAND, OR, NOR, XOR, XNOR   : いずれも満たさない(OR型寄り)
+
+NAND=NOT(AND)のように、AND型のゲートに外側からNOTを1回被せる
+だけで、この綺麗な不変性は壊れてしまう(NOT自身がxiに依存する
+"もう一段のreg"だから)。
+
+**ただし満たさない5つの中でもNANDだけは性質が違った**。NAND・OR・
+NOR・XOR・XNORで実際にa,bを動かして誤分類領域を調べたところ:
+
+    - OR, NOR, XOR, XNOR: 命題8と同じ「a,bが両方ともそこそこ
+      非ゼロなのに広い範囲で誤判定する」領域を持つ(NORはORの
+      誤分類領域をそのまま裏返しただけ、XORは内部でOR型の
+      合成を使っているため同じ問題を引き継ぐ)。
+    - NAND: 単一の鋭い閾値を持つ(AND型と同様、広い誤分類領域は
+      **持たない**)。ただしその閾値はAND自身の共鳴点
+      (命題1、O(xi))とは異なる、**新しいスケール**:
+
+        a*b ~= sqrt(arctanh(1/sqrt(2))) * xi^(3/2)      (v0.24)
+
+      という、xi^(3/2)というAND(O(xi))ともOR(O(xi*log(1/xi)))
+      とも違う、**3つ目の独立したスケーリング則**であることを
+      閉形式で導出・検証した(xi=1e-2〜1e-10で、実測境界と
+      予測の比が1.00000に収束することを確認。`nand_threshold_ab`,
+      `nand_threshold_numeric`参照)。
+
+**正直な評価**: 「単一の比に還元できるか」という命題5の判定基準
+だけでは、NANDのような"AND型の親戚だが閾値のスケールは違う"
+ケースを見落としてしまうことがわかった。分類自体
+(部分ディレーション不変性の有無)は厳密(sympyで確認)だが、
+NORやXOR/XNORの誤分類領域の精密な閉形式(命題8のような)は
+今回導出していない(定性的な確認にとどまる)。NANDのxi^(3/2)則は
+導出・数値検証ともに確信を持てる。
+
+【命題12(v0.25): NORの誤分類境界(命題8の直接の応用)】
+命題11で「NORはOR型(命題8のような広い誤分類領域を持つ)」と
+定性的に確認するにとどめていたが、命題8と同じ手法をそのまま
+適用することで、NORについても閉じた形の境界を導出できた。
+
+NOR(a,b;xi)=0.5 の境界は、u=a/xi, v=b/xiの言葉で
+
+    u + v = (1/2)*ln(1/xi) + K_NOR(xi)
+    K_NOR(xi) = (1/2)*ln(32/ln(4/(xi*A))),  A := arctanh(1/sqrt(2))
+
+という直線に収束する(命題8のOR境界と同じ「u+v=一定」という形だが、
+定数項K_NORにxiのlogのlog、という珍しい二重対数補正がつく)。
+
+導出: NOR=0.5 <=> OR=xi*A(命題8のOR=0.5条件と同型の式を、
+NOR=NOT(OR)という一段の入れ子越しに適用しただけ)。OR=1-reg(p;xi)=xi*A
+を解くとp/xi=arctanh(1-xi*A/2)~=(1/2)ln(4/(xi*A))(小さいepsilonに
+ついてarctanh(1-eps)~=(1/2)ln(2/eps)を使用)。p~=16*exp(-2(u+v))
+に代入してu+vについて解くと上式になる。
+
+数値検証: xi=1e-2〜1e-12で実測境界との差が着実に縮小(xi=1e-12で
+差~1.8e-6)。u/v比を0.2〜5で振ってもu+vはほぼ一定(9.40〜9.45、
+xi=1e-8)であることも確認した。
+
+NOR=NOT(OR)なので、これは命題8のORの誤分類領域を単に"裏返した"
+ものに過ぎず、数学的に新しい現象ではない。それでも命題11で
+"定性的な確認にとどまる"と正直に書いていた課題に、閉じた形の
+答えを出せたのは収穫。XOR/XNORについては、対角線a=b上で単純な
+"0.5交差"という形にならない(対称性のため、XOR(a,a)は別の構造を
+持つ)ことが分かり、今回は同じ手法をそのまま適用できなかった
+——引き続き未解決のまま残す。
+
+【命題13(v0.27): XORの断面(b=0)における4つ目のスケーリング則】
+対角線a=bが使えなかったXORについて、別の断面(b=0固定)を試した。
+b=0のとき、XOR(a,0;xi) = NOT(NOT(reg(a;xi);xi);xi) という
+"二重NOT"の構造になる(NAND=NOT(AND)の"一重NOT"よりもう一段深い)。
+
+XOR(a,0;xi)=0.5の境界をu=a/xiで解くと、xi->0の漸近極限で
+
+    u ~= sqrt( (1/2)*xi*ln(4/(xi*A)) ),   A := arctanh(1/sqrt(2))
+
+という、AND(O(xi))・OR(O(xi*log(1/xi)))・NAND(O(xi^1.5))に続く
+**4つ目の独立したスケーリング則**が出てきた。xi=1e-2〜1e-10で、
+実測境界との比が1.00000に収束することを確認した
+(`xor_zero_cross_section_threshold`, `xor_zero_cross_section_numeric`参照)。
+
+面白いのは、この閾値がAND自身の共鳴点(命題1、O(xi)、a=xi*u*)
+よりもさらに**小さい**a(xi^1.5オーダーの補正込みなので、
+xiが小さいほどAND自身の閾値よりずっと手前で反応する)で切り替わる
+ことである。これは"二重NOT"がAND単体よりも感度を上げる方向に
+働く(NAND・NORで見た"もう一段NOTを重ねると閾値がシフトする"
+という現象の、また違う現れ方)ことを示している。
+
+正直な限界: これはb=0に固定した特別な断面での結果であり、a,b
+両方が非ゼロな一般の場合のXORの誤分類領域(命題8のような閉じた
+2変数の式)はまだ導出できていない。XNORについても同様の手法が
+使えるはずだが、今回は時間の都合で手を付けていない。
+
+【命題14(v0.28): XOR(a,a)の誤分類"帯"とLambert W函数の登場】
+命題13(b=0断面)の直後、対角線a=b自体も実は攻略できることに
+気づいた。XOR(a,a;xi)は定義上つねに0(偽)であるべき対称な量
+だが、実際にはuが**ある帯の中にあるとき**だけ誤って1(真)に
+張り付くことが分かった:
+
+    u_lower ~= sqrt( xi * (1/2) * ln(4/sqrt(xi*A)) )          (下側境界)
+    u_upper ~= -W_{-1}(-2*R(xi)) / 2,
+        R(xi) := (sqrt(xi)/4) * sqrt( (1/2)*ln(4/sqrt(xi*A)) )  (上側境界)
+
+    (A := arctanh(1/sqrt(2)) 、W_{-1}はLambert W函数の下側分岐)
+
+u<u_lowerとu>u_upperでは正しく0、u_lower<u<u_upperの帯の中でだけ
+誤って1になる。導出はXOR(a,a;xi)=OR(x,x;xi)(x:=AND(a,NOT(a);xi))
+という単純化から始まり、OR(x,x;xi)=0.5を解いてx自体の目標値を求め
+(下側・上側で共通)、それをx=reg(a*NOT(a);xi)について解く際に
+「uが小さい極限」(下側境界、NOT(a)~=1)と「uが大きい極限」
+(上側境界、NOT(a)~=4*exp(-2u))のどちらを使うかで、それぞれ
+違う閉形式が出る。上側境界の方程式 u*exp(-2u)=R(xi) は、
+w:=-2uと置換するとLambert W函数の定義式 w*exp(w)=-2R(xi) その
+ものになり、**このライブラリで初めてLambert W函数が登場した**。
+
+数値検証: xi=1e-3〜1e-10で、両方の境界とも実測値との比が
+1.00000に収束することを確認した(`xor_diagonal_lower_threshold`,
+`xor_diagonal_upper_threshold`, `xor_diagonal_threshold_numeric`参照)。
+
+正直な評価: これで対角線a=b上でのXORの挙動は(下側・上側とも)
+きれいに閉じた形で説明できた。ただし一般の(a≠b、両方とも
+自由に動く)場合の誤分類領域の全体像はまだ描けていない
+——これは命題13・14を包含する、より大きな2変数の問題として
+残る。
+
+【命題15(v0.29): XNORの断面(b=0)、6ゲート全部の断面解析が完了】
+XNOR(a,0;xi)=NOT(XOR(a,0;xi);xi)を、命題13(XORのb=0断面)に
+もう一段NOTを重ねた**三重NOT**として解析した。命題8以降で
+繰り返し使ってきた「NOT(z;xi)=xi*A(A:=arctanh(1/sqrt(2)))という
+小さい目標値を逆算する」という同じ操作を3回入れ子にするだけで、
+
+    y := NOT(reg(a;xi);xi)の目標値 ~= xi*(1/2)*ln(4/(xi*A))
+    z := reg(a;xi)の目標値        ~= xi*(1/2)*ln(4/y)
+    u = a/xi                      ~= sqrt(z)
+
+という閉形式が出た。xi=1e-2〜1e-12で、実測境界との比が1.000000に
+収束することを確認した(`xnor_zero_cross_section_threshold`,
+`xnor_zero_cross_section_numeric`参照)。
+
+これで、6ゲート(AND, OR, NAND, NOR, XOR, XNOR)すべてについて、
+少なくとも1つの具体的な断面(対角線または b=0)で、誤分類境界の
+閉形式を与えられたことになる:
+
+    ゲート  | 断面        | スケーリング則
+    AND     | (単一変数)  | O(xi)                          (命題1)
+    OR      | u+v         | O(xi*log(1/xi))                (命題8)
+    NAND    | a*b(対角線) | O(xi^1.5)                       (命題11)
+    NOR     | u+v         | O(xi*log(1/xi))、二重対数補正   (命題12)
+    XOR     | b=0         | O(sqrt(xi*log(1/xi)))           (命題13)
+    XOR     | 対角線      | 帯構造、上側境界にLambert W函数 (命題14)
+    XNOR    | b=0         | 三重入れ子のlog                 (命題15)
+
+正直な評価: これらはすべて特定の断面(対角線かb=0)での結果であり、
+各ゲートの(a,b)平面全体の誤分類領域の完全な閉形式は、OR側の
+命題8(と、その2次元的な完全性がv0.26で確認された経緯)を除いて、
+まだ描けていない。それでも「NOTを重ねるたびに閾値のスケールが
+系統的にシフトしていく」という現象を、6ゲート全部について
+具体的な数式で確認できたのは、今回のシリーズ(命題5、11〜15)の
+一番の到達点だと思う。
+
+【命題16(v0.30): NOT合成塔の統一理論——命題11・13・15を1つに統合】
+命題11(NAND)・13(XORのb=0断面)・15(XNORのb=0断面)を並べて
+見比べていて、これらが実は**たった1つの一般理論の特殊ケース**
+だったことに気づいた。共通しているのは「reg(x;xi)にNOTをn回
+繰り返し適用した合成Psi_n(x;xi)が0.5になる閾値」という構造
+(n=1がNAND、n=2がXORのb=0断面、n=3がXNORのb=0断面に対応する)。
+
+これを一般のnについて解くと、次の"対数の塔"(log tower)が
+閉じた形で現れる:
+
+    T_0(xi)  := xi*A                          (A := arctanh(1/sqrt(2)))
+    T_k(xi)  := xi*(1/2)*ln(4/T_{k-1}(xi))    for k=1,...,n-1
+    x*_n(xi) := xi*sqrt(T_{n-1}(xi))            (n>=1)
+
+導出は、命題8以降で繰り返し使ってきた「reg(z;xi)=0.5<=>z=xi*A」
+という関係と、「NOT(z;xi)=小さい目標値、を逆算する」という
+epsilon近似を、nに応じてn回繰り返し適用するだけ。
+
+**この一般公式は、n=1,2,3で命題11・13・15をそのまま(誤差ゼロで)
+再現する**——実際、not_tower_threshold(1,xi)、(2,xi)、(3,xi)は
+それぞれnand_threshold_ab、xor_zero_cross_section_threshold*xi、
+xnor_zero_cross_section_threshold*xiとビット単位で一致する
+(同じ計算を一般化しただけなので当然ではあるが、統一できたことに
+意味がある)。さらにn=4,5という、名前の付いた標準ゲートには
+対応しない"より深いNOTの入れ子"についても、この一般公式が
+そのまま正しく機能することを数値検証で確認した——これは新しい
+ゲート(将来もっと複雑な論理式を合成したとき)の閾値予測に、
+そのまま使える一般理論になっている。
+
+数値検証: n=1,3,5について、xi=1e-2〜1e-6(float64)で実測値との
+比が1.000002〜1.01のオーダーで1に収束することを確認した。開発中は
+mpmathの50〜60桁精度でxi=1e-40まで検証し、比が1.00000000
+(小数点以下8桁まで完全に1)に収束することも確認済み——float64での
+検証はxi<1e-6あたりでNOTの繰り返し適用による丸め誤差が蓄積し
+精度が落ちる(`not_tower_threshold_numeric`のdocstring参照)。
+
+正直な評価: これは「新しい現象の発見」というより「既に見つけていた
+3つの結果(命題11・13・15)が、実は1つの一般理論の特殊ケースに
+過ぎなかったと気づき、それを nについて閉じた形で解いた」という
+**統合(unification)**である。とはいえ、ユーザーが当初から目指して
+いた「統一理論」という言葉にもっとも近い成果になったと思う。
+n>=4の場合の解釈(対応する具体的な論理ゲートがあるのか)は
+考えていない——あくまで数式としての一般化にとどまる。
+
+【命題10の必要性についての追加調査(v0.34)】命題10(v0.23)の条件
+(少なくとも1つの値が閾値を超える)が**必要条件でもあるか**を
+調べた。全部の値をこの閾値未満に強制して乱数生成しても、実際には
+高い確率(実測で7〜9割程度)でnaive foldとOR_n融合版が一致して
+しまう(gapが小さい)ことを確認した——つまり**命題10の条件は
+十分条件だが必要条件ではない**ことがはっきりした。
+
+命題9(融合版OR_nの正しさの"総和"条件)のmarginとの相関も調べたが、
+「良い一致」グループと「悪い不一致」グループでmarginの分布が
+大きく重なっており、単純な閾値では両者をきれいに分離できない
+ことも確認した(`or_n_trigger_condition_is_not_necessary`参照)。
+
+正直な評価: 「naive foldとOR_n融合版が一致するための必要十分条件」
+は、個々の値の最大値や総和のような単純な集計量だけでは決まらず、
+畳み込みの順序や個々の値の並び方に依存する、より複雑な条件である
+可能性が高い、ということが今回の調査で明確になった。完全な解決に
+は至っていないが、「どこまでが分かっていて、どこからが分かって
+いないか」の境界をはっきりさせられたのは収穫。
 """
 import numpy as np
 
@@ -567,6 +802,47 @@ def or_second_resonance_numeric_argmax(xi, c, v_max=None, n_coarse=400_000, n_fi
     return float(vs2[np.argmax(hs2)])
 
 
+def or_full_gradient_magnitude_argmax(xi, c, v_bounds=None):
+    """
+    v0.18で残っていた"(a,b)平面の危険地図の真の尾根"の解決策
+    (v0.26)。命題6は当初「d/da OR(a,b)の一部h(v)=NOT(b)*reg'(p)」
+    だけを最大化していたが、実は**|grad OR|=sqrt((dOR/da)^2+(dOR/db)^2)
+    という結合された勾配の大きさそのものを最大化しても、a=c*xiを
+    固定したときの最適なvは(数値精度10^-6〜10^-10のオーダーで)
+    or_second_resonance_locationと厳密に一致する**ことが分かった。
+
+    つまり命題6の閉形式は、"部分的な勾配"の共鳴点であるだけでなく、
+    **(a,b)平面上の|grad OR|の"真の尾根"そのもの**でもあった
+    (v0.18で「近似曲線は数%〜十数%の誤差で尾根に近い」と書いていたが、
+    命題6の閉形式を(離散的な数点ではなく)cの連続関数として使えば、
+    誤差は数値精度の範囲に収まる)。
+
+    このヘルパーは、|grad OR|^2をscipyのminimize_scalarで直接
+    最大化し、or_second_resonance_locationの予測と比較するために使う。
+    v_boundsを省略すると、命題6の予測値を中心にした狭い探索範囲を
+    自動で使う(scipyのbounded探索が広すぎる範囲で境界に張り付く
+    誤りを避けるため)。
+    """
+    from scipy.optimize import minimize_scalar
+
+    a = c * xi
+
+    if v_bounds is None:
+        v_guess = or_second_resonance_location(xi, c)
+        v_bounds = (max(v_guess - 5.0, 0.05), v_guess + 5.0)
+
+    def neg_grad_mag_sq(v):
+        b = v * xi
+        p = (1 - _reg(a, xi)) * (1 - _reg(b, xi))
+        ga = _reg_prime(a, xi) * (1 - _reg(b, xi)) * _reg_prime(p, xi)
+        gb = _reg_prime(b, xi) * (1 - _reg(a, xi)) * _reg_prime(p, xi)
+        return -(ga ** 2 + gb ** 2)
+
+    res = minimize_scalar(neg_grad_mag_sq, bounds=v_bounds, method="bounded",
+                           options={"xatol": 1e-13})
+    return float(res.x)
+
+
 def or_misclassification_boundary_sum(xi):
     """
     命題8の閉形式(v0.19): OR(a,b;xi)=0.5となる境界での u+v=a/xi+b/xi
@@ -735,3 +1011,514 @@ def or_breaks_partial_dilation_invariance(a, b, xi, lam):
     lhs = NOT(NOT(lam * a, lam * xi) * NOT(b, lam * xi), lam * xi)
     rhs = NOT(NOT(a, xi) * NOT(b, xi), xi)
     return lhs, rhs
+
+
+def _core_gate_values(a, b, xi):
+    """内部ヘルパー: core.pyと同じ定義でAND/OR/NAND/NOR/XOR/XNORを計算する。"""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    AND_ = _reg(a * b, xi)
+    OR_ = NOT_(NOT_(a) * NOT_(b))
+    NAND_ = NOT_(AND_)
+    NOR_ = NOT_(OR_)
+    XOR_ = NOT_(NOT_(_reg(a * NOT_(b), xi)) * NOT_(_reg(NOT_(a) * b, xi)))
+    XNOR_ = NOT_(XOR_)
+    return {"AND": AND_, "OR": OR_, "NAND": NAND_, "NOR": NOR_, "XOR": XOR_, "XNOR": XNOR_}
+
+
+def nand_threshold_ab(xi):
+    """
+    【命題11(v0.24)の一部】NAND(a,b;xi)=0.5 となる境界(a=bの対角線上)
+    の閉形式(xi->0の漸近極限):
+
+        a*b ~= sqrt(arctanh(1/sqrt(2))) * xi^(3/2)
+
+    NAND=NOT(AND(a,b;xi);xi)のように、すでに[0,1)に収まっている
+    確率的な値(ここではAND(a,b;xi))にもう一度NOT(=reg)を適用すると、
+    AND自身の共鳴点(命題1のxi*u*、O(xi))とは異なる**xi^(3/2)という
+    新しいスケール**が閾値として現れる。AND側(命題1、O(xi))・
+    OR側(命題6/8/9、O(xi*log(1/xi)))に続く、**3つ目の異なる
+    スケーリング則**。
+
+    導出: NAND=0.5 <=> reg(AND;xi)=0.5 <=> AND=xi*A (A:=arctanh(1/sqrt2))。
+    AND=tanh(ab/xi)^2=xi*A(微小量)なので、tanh(ab/xi)~=sqrt(xi*A)
+    (小さい引数なのでtanh(w)~=w)、よってab~=xi*sqrt(xi*A)=sqrt(A)*xi^1.5。
+
+    数値検証: xi=1e-2〜1e-10で、実際の境界とこの閉形式の比が
+    1.00000に収束することを確認済み(`nand_threshold_numeric`参照)。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    return np.sqrt(A) * xi ** 1.5
+
+
+def nand_threshold_numeric(xi):
+    """
+    命題11のnand_threshold_abを数値的に検証するヘルパー。a=bの対角線上で
+    NAND(a,a;xi)=0.5となるa^2(=ab)の値をbrentqで求める。
+    """
+    from scipy.optimize import brentq
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    def f(s):
+        AND_ = _reg(s * s, xi)
+        NAND_ = NOT_(AND_)
+        return NAND_ - 0.5
+
+    s_cross = brentq(f, 1e-12, 10.0)
+    return s_cross ** 2
+
+
+def gate_dilation_type(gate_name, a=1.1, b=-0.6, xi=0.5, lam=1.8, tol=1e-9):
+    """
+    【命題11: ゲートの分類】core.pyの6つのゲート(AND,OR,NAND,NOR,XOR,XNOR)
+    それぞれについて、命題5の部分ディレーション不変性
+    (gate(lam*a,b;lam*xi) == gate(a,b;xi)) を満たすかどうかを判定する。
+
+    結果(sympyでの記号的確認・数値確認の両方で一致):
+        AND  : 満たす(a*b/xiという単一の比だけの関数、命題5)
+        NAND, OR, NOR, XOR, XNOR : いずれも満たさない
+
+    満たさない5つのうち、NANDだけは「単一の鋭い閾値がxi^(3/2)という
+    別のスケールにシフトするだけ」で、OR・NOR・XOR・XNORのような
+    "log(1/xi)"型の広い誤分類領域(命題8)は持たない、という違いが
+    ある(数値実験で確認。詳細はdev_notes.md v0.24参照)。
+
+    戻り値: True なら"AND型"(部分ディレーション不変)、
+    False なら"OR型"(不変性が崩れる)。
+    """
+    vals = _core_gate_values(a, b, xi)
+    vals_scaled = _core_gate_values(lam * a, b, lam * xi)
+    return bool(abs(vals[gate_name] - vals_scaled[gate_name]) < tol)
+
+
+def nor_misclassification_boundary_sum(xi):
+    """
+    【命題12(v0.25)】命題8(ORの誤分類境界)と同じ手法をNORに適用した
+    もの。NOR(a,b;xi)=0.5 となる境界を u=a/xi, v=b/xi の言葉で調べると、
+    命題8と同じ「u+v=一定」という直線に(xi->0の漸近極限で)収束するが、
+    定数項に**もう一段のlog(log)補正**が付く:
+
+        u + v = (1/2)*ln(1/xi) + K_NOR(xi)
+        K_NOR(xi) := (1/2)*ln(32 / ln(4/(xi*A))),   A := arctanh(1/sqrt(2))
+
+    導出: NOR=0.5 <=> OR=xi*A(命題8のOR=0.5条件と同型の式をもう一段
+    適用)。OR=1-reg(p;xi)=xi*Aを解くと、p/xi=arctanh(1-xi*A/2)、
+    小さいepsilonについてarctanh(1-eps)~=(1/2)ln(2/eps)を使うと
+    p/xi~=(1/2)ln(4/(xi*A))となり、これをp~=16*exp(-2(u+v))に代入して
+    u+vについて解くと上式が出る。
+
+    数値検証: xi=1e-2〜1e-12で、実際の境界と閉形式の差が着実に縮む
+    ことを確認(xi=1e-12で差~1.8e-6)。u/v比を0.2〜5で振っても
+    u+vはほぼ一定(9.40〜9.45、xi=1e-8)であることも確認済み
+    (`nor_misclassification_boundary_numeric`参照)。
+
+    NOR=NOT(OR)なので、これは命題8のORの誤分類領域をそのまま
+    "裏返した"ものに過ぎない——a,bが両方とも非ゼロなのにNORが
+    誤って1(both false)に近い値を返してしまう領域が、この直線の
+    内側(u+vが小さい側)に広がっている。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    K_NOR = 0.5 * np.log(32 / np.log(4 / (xi * A)))
+    return 0.5 * np.log(1 / xi) + K_NOR
+
+
+def nor_misclassification_boundary_numeric(xi, ratio=1.0):
+    """
+    命題12を数値的に検証するヘルパー。u=ratio*v として、
+    NOR(ratio*v*xi, v*xi; xi) = 0.5 となるvをbrentqで求め、u+vを返す。
+    """
+    from scipy.optimize import brentq
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    def OR_(x, y):
+        return NOT_(NOT_(x) * NOT_(y))
+
+    def f(v):
+        u = ratio * v
+        a, b = u * xi, v * xi
+        return NOT_(OR_(a, b)) - 0.5
+
+    v_cross = brentq(f, 1e-8, 500.0)
+    u_cross = ratio * v_cross
+    return u_cross + v_cross
+
+
+def xor_zero_cross_section_threshold(xi):
+    """
+    【命題13(v0.27): XORの断面(b=0)における新しいスケーリング則】
+
+    XOR(a,0;xi) = NOT(NOT(reg(a;xi);xi);xi) という"二重NOT"の構造
+    (b=0のとき、AND(a,NOT(0))=reg(a;xi)、AND(NOT(a),0)=0なので、
+    XOR(a,0)=OR(reg(a;xi),0)=NOT(NOT(reg(a;xi))*1;xi)=NOT(NOT(reg(a;xi));xi)
+    となる)を持つ。NAND(=NOT(AND)の"一重NOT")と同じ発想だが、
+    ここではreg(a;xi)にさらにもう一段NOTが掛かる。
+
+    XOR(a,0;xi)=0.5 となる境界を u=a/xi の言葉で解くと、xi->0の
+    漸近極限で
+
+        u ~= sqrt( (1/2)*xi*ln(4/(xi*A) ) ),   A := arctanh(1/sqrt(2))
+
+    という、AND(O(xi))・OR(O(xi*log(1/xi)))・NAND(O(xi^1.5))に続く
+    **4つ目の独立したスケーリング則**(xi^1.5に対数の平方根補正が
+    掛かった形、a自体で見るとa~xi^1.5*sqrt(log(1/xi))相当)になる。
+
+    導出: XOR(a,0;xi)=0.5 <=> NOT(reg(a;xi);xi)=xi*A(命題11のNAND
+    と同じ式)。1-reg(x;xi)=xi*A(x:=reg(a;xi))を解くとx~=xi*(1/2)*
+    ln(4/(xi*A))(NORの導出と同じepsilon近似)。x=tanh(a/xi)^2が
+    この微小値に等しいので、tanh(a/xi)~=sqrt(x)(小さい引数なので
+    tanh(w)~=wも使う)、よってa/xi~=sqrt(x)=sqrt((1/2)*xi*ln(4/(xi*A)))。
+
+    数値検証: xi=1e-2〜1e-10で、実測境界との比が1.00000に収束する
+    ことを確認済み(`xor_zero_cross_section_numeric`参照)。
+
+    正直な限界: これはb=0に固定した特別な断面での結果であり、
+    a,b両方が非ゼロな一般の場合のXORの誤分類領域(命題8のような
+    閉じた2変数の式)はまだ導出できていない。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    target = xi * 0.5 * np.log(4 / (xi * A))
+    return np.sqrt(target)
+
+
+def xor_zero_cross_section_numeric(xi):
+    """
+    命題13を数値的に検証するヘルパー。XOR(u*xi, 0; xi) = 0.5 となる
+    uをbrentqで求める。xor_zero_cross_section_thresholdの予測値と
+    比較するために使う。
+    """
+    from scipy.optimize import brentq
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    def AND_(x, y):
+        return _reg(x * y, xi)
+
+    def OR_(x, y):
+        return NOT_(NOT_(x) * NOT_(y))
+
+    def XOR_(x, y):
+        return OR_(AND_(x, NOT_(y)), AND_(NOT_(x), y))
+
+    def f(u):
+        return XOR_(u * xi, 0.0) - 0.5
+
+    return brentq(f, 1e-9, 10.0)
+
+
+def xor_diagonal_lower_threshold(xi):
+    """
+    【命題14(v0.28)の一部: XOR(a,a;xi)の誤分類"帯"、下側の境界】
+
+    XOR(a,a;xi)は定義上つねに0(偽)であるべき対称な量だが、実際には
+    u=a/xiがある範囲(下側閾値<u<上側閾値)にあるとき、誤って1
+    (真)に張り付いてしまう。この下側の境界(xi->0の漸近極限):
+
+        u_lower ~= sqrt( xi * (1/2) * ln(4/sqrt(xi*A)) ),  A:=arctanh(1/sqrt(2))
+
+    導出: XOR(a,a;xi)=OR(x,x;xi)、x:=AND(a,NOT(a);xi)=reg(a*NOT(a);xi)。
+    OR(x,x;xi)=0.5を解くとNOT(x;xi)=sqrt(xi*A)になり(命題8のOR=0.5条件
+    のx=y版)、これをxについて解くとx~=xi*(1/2)*ln(4/sqrt(xi*A))
+    (NOT(x;xi)=1-tanh(x/xi)^2=sqrt(xi*A)という小さい目標値を、
+    命題12と同様のarctanh(1-epsilon)近似で解く)。さらにx=reg(a*NOT(a);xi)
+    をa*NOT(a)について解くと、小さいu(NOT(a)~=1相当)の極限で
+    a*NOT(a)~=a=u*xiとなるので、u~=sqrt(x/xi)という上の式になる。
+
+    数値検証: xi=1e-3〜1e-10で、実測境界との比が1.00000に収束する
+    ことを確認済み(`xor_diagonal_threshold_numeric`参照)。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    x_target = xi * 0.5 * np.log(4 / np.sqrt(xi * A))
+    return np.sqrt(x_target)
+
+
+def xor_diagonal_upper_threshold(xi):
+    """
+    【命題14(v0.28)の一部: XOR(a,a;xi)の誤分類"帯"、上側の境界】
+
+    下側閾値(xor_diagonal_lower_threshold)を超えると、XOR(a,a;xi)は
+    誤って1に張り付く"帯"に入るが、uがさらに大きくなると、この帯を
+    抜けて正しく0に戻る。この上側の境界は、**Lambert W函数**を使う
+    閉形式になる(xi->0の漸近極限):
+
+        R(xi) := (sqrt(xi)/4) * sqrt( (1/2)*ln(4/sqrt(xi*A)) )
+        u_upper ~= -W_{-1}(-2*R(xi)) / 2
+
+    (W_{-1}はLambert W函数の下側分岐。scipy.special.lambertw(z,k=-1)。)
+
+    導出: xor_diagonal_lower_thresholdと同じくOR(x,x;xi)=0.5から
+    x~=xi*(1/2)*ln(4/sqrt(xi*A))(下側閾値と同じ目標値)までは共通。
+    ここで、a*NOT(a;xi)=reg^{-1}(x)を解く際に、**uが大きい**極限
+    (NOT(a;xi)~=4*exp(-2u)、下側閾値の"uが小さい"極限とは逆側)を
+    使うと、方程式が u*exp(-2u) = R(xi) という超越方程式になる
+    (u*NOT(a)~=4*u*xi*exp(-2u)を、x~=xi*sqrt(x/xi)...ではなく
+    tanh(y/xi)~=sqrt(x/xi)から出るy~=xi*sqrt(x/xi)に代入して整理)。
+    w:=-2uと置換するとw*exp(w)=-2*R(xi)というLambert W函数の定義式
+    そのものになり、大きい|w|側の解(W_{-1}分岐)がu_upperを与える。
+
+    数値検証: xi=1e-3〜1e-10で、実測境界との差が着実に縮小する
+    ことを確認済み(xi=1e-10で差~1.2e-6)。
+    """
+    from scipy.special import lambertw
+
+    A = np.arctanh(1 / np.sqrt(2))
+    R = (np.sqrt(xi) / 4) * np.sqrt(0.5 * np.log(4 / np.sqrt(xi * A)))
+    w = lambertw(-2 * R, k=-1)
+    return float((-w / 2).real)
+
+
+def xor_diagonal_threshold_numeric(xi, which="lower"):
+    """
+    命題14を数値的に検証するヘルパー。XOR(u*xi,u*xi;xi)=0.5となる
+    uをbrentqで求める。which="lower"なら下側の交差(u<1付近を探索)、
+    which="upper"なら上側の交差(u>1付近を探索)を返す。
+    """
+    from scipy.optimize import brentq
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    def AND_(x, y):
+        return _reg(x * y, xi)
+
+    def OR_(x, y):
+        return NOT_(NOT_(x) * NOT_(y))
+
+    def XOR_(x, y):
+        return OR_(AND_(x, NOT_(y)), AND_(NOT_(x), y))
+
+    def f(u):
+        return XOR_(u * xi, u * xi) - 0.5
+
+    if which == "lower":
+        return brentq(f, 1e-9, 1.0)
+    return brentq(f, 1.0, 40.0)
+
+
+def xnor_zero_cross_section_threshold(xi):
+    """
+    【命題15(v0.29): XNORの断面(b=0)、二重対数のネスト構造】
+
+    XNOR(a,0;xi) = NOT(XOR(a,0;xi);xi) の"=0.5"境界を、命題13
+    (XORのb=0断面)と同じ手法をもう一段適用して求める。
+    b=0のときXOR(a,0;xi)=NOT(NOT(reg(a;xi);xi);xi)(命題13)なので、
+    XNOR(a,0;xi)=NOT(NOT(NOT(reg(a;xi);xi);xi);xi)という**三重NOT**
+    の構造になる。
+
+    導出(NOT(z;xi)=xi*A(A:=arctanh(1/sqrt(2)))という小さい目標値を
+    逆算する、という同じ手順を3回繰り返すだけ):
+
+        m := NOT(reg(a;xi);xi) の目標値 y ~= xi*(1/2)*ln(4/(xi*A))
+        (これは命題13の"内側"の式そのもの)
+        次に reg(a;xi) 自体の目標値 z ~= xi*(1/2)*ln(4/y)
+        (NOT(reg(a;xi);xi)=yを逆算、命題12・NORの式と同型)
+        最後に u=a/xi ~= sqrt(z) (reg(a;xi)=tanh(u)^2=zをuについて
+        小さい引数の近似tanh(w)~=wで解く、命題13の最後の式と同型)
+
+    3段のネストになるが、どの段も命題8以降で繰り返し使ってきた
+    「NOT(z;xi)=小さい目標値、を逆算する」という同じ操作の反復に
+    すぎない。
+
+    数値検証: xi=1e-2〜1e-12で、実測境界との比が1.000000に収束する
+    ことを確認済み(`xnor_zero_cross_section_numeric`参照)。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    y = xi * 0.5 * np.log(4 / (xi * A))
+    z = xi * 0.5 * np.log(4 / y)
+    return np.sqrt(z)
+
+
+def xnor_zero_cross_section_numeric(xi):
+    """
+    命題15を数値的に検証するヘルパー。XNOR(u*xi,0;xi)=0.5となるuを
+    brentqで求める。xnor_zero_cross_section_thresholdの予測値と
+    比較するために使う。
+    """
+    from scipy.optimize import brentq
+
+    def NOT_(x):
+        return 1 - _reg(x, xi)
+
+    def AND_(x, y):
+        return _reg(x * y, xi)
+
+    def OR_(x, y):
+        return NOT_(NOT_(x) * NOT_(y))
+
+    def XOR_(x, y):
+        return OR_(AND_(x, NOT_(y)), AND_(NOT_(x), y))
+
+    def XNOR_(x, y):
+        return NOT_(XOR_(x, y))
+
+    def f(u):
+        return XNOR_(u * xi, 0.0) - 0.5
+
+    return brentq(f, 1e-9, 10.0)
+
+
+def not_composition_tower(x, n, xi):
+    """
+    命題16(v0.30)の基本演算: Psi_n(x;xi) := reg(x;xi)にNOTをn回
+    繰り返し適用したもの。n=0ならAND型(reg自体)、n=1ならNAND型、
+    n=2ならXOR(a,0)型、n=3ならXNOR(a,0)型に対応する
+    (単一変数xの断面としての比較。詳細はnot_tower_thresholdの
+    docstring参照)。
+    """
+    val = _reg(x, xi)
+    for _ in range(n):
+        val = 1 - _reg(val, xi)
+    return val
+
+
+def not_tower_threshold(n, xi):
+    """
+    【命題16(v0.30): NOT合成塔の統一理論——命題11・13・15を包含する
+    一般公式】
+
+    命題11(NAND)・13(XORのb=0断面)・15(XNORのb=0断面)は、実は
+    すべて「reg(x;xi)にNOTをn回繰り返し適用した合成
+    Psi_n(x;xi):=not_composition_tower(x,n,xi)が0.5になる閾値
+    x*_n(xi)」という、**たった1つの一般理論の特殊ケース**
+    (n=1,2,3)だった。
+
+    Psi_n(x*_n;xi)=0.5 を逆算で解くと、次の"対数の塔"
+    (log tower)が現れる:
+
+        T_0(xi)   := xi*A                      (A := arctanh(1/sqrt(2)))
+        T_k(xi)   := xi*(1/2)*ln(4/T_{k-1}(xi))   for k=1,...,n-1
+        x*_n(xi)  := xi*sqrt(T_{n-1}(xi))           (n>=1の場合)
+        x*_0(xi)  := xi*A                           (n=0、reg自体の場合)
+
+    導出: Psi_n(x)=NOT(Psi_{n-1}(x);xi)なので、Psi_n(x)=0.5を
+    満たすには、命題8のOR=0.5条件と同型の式 NOT(z;xi)=1-2*reg(z;xi)
+    より、Psi_{n-1}(x)=xi*Aが必要(reg(z;xi)=0.5<=>z=xi*Aという、
+    このライブラリで繰り返し使ってきた基本の関係そのもの)。
+    さらにPsi_{n-2}(x)を求めるには、NOT(Psi_{n-2};xi)=xi*A
+    (小さい目標値)を逆算し、reg(Psi_{n-2};xi)=1-xi*A(1に近い)から
+    Psi_{n-2}~=xi*(1/2)*ln(4/(xi*A))を得る——これが命題12(NOR)・
+    13で使った"epsilon近似"と同じ操作である。以下同様に、小さい
+    目標値T_{k-1}からNOT(z;xi)=T_{k-1}を逆算してT_k~=xi*(1/2)*
+    ln(4/T_{k-1})を得る、という同じ操作をn-1回繰り返す。最後に
+    Psi_0(x)=reg(x;xi)=T_{n-1}(小さい値)をxについて解くと、
+    小さい引数の近似tanh(w)~=wにより x*_n~=xi*sqrt(T_{n-1})になる。
+
+    **この一般公式は、n=1,2,3で命題11・13・15をそのまま再現する**
+    (n=1: NANDの"a*b"、n=2: XORのb=0断面の"a"、n=3: XNORのb=0
+    断面の"a"、として、それぞれ変数の意味づけだけが違う)。さらに
+    n=4,5,...という、名前の付いた標準ゲートには対応しない
+    "より深いNOTの入れ子"についても、この一般公式がそのまま
+    使えることを数値検証で確認した(下記参照)——これは新しい
+    ゲートを設計する際の閾値予測にそのまま使える。
+
+    数値検証: n=1,3,5について、xi=1e-2〜1e-40(開発時にmpmath
+    50〜60桁精度で検証)まで、実測値との比が1.00000000に収束する
+    ことを確認した。本関数はfloat64で実装しているため、xi<1e-6
+    あたりでnot_composition_towerのfloat64精度限界(NOTの繰り返しに
+    よる丸め誤差の蓄積)に達することがある——大きなnやxi<<1での
+    高精度な検証にはmpmathなどの多倍長精度演算を推奨する
+    (`not_tower_threshold_numeric`のdocstring参照)。
+    """
+    if n == 0:
+        A = np.arctanh(1 / np.sqrt(2))
+        return xi * A
+
+    A = np.arctanh(1 / np.sqrt(2))
+    T = xi * A
+    for _ in range(1, n):
+        T = xi * 0.5 * np.log(4 / T)
+    return xi * np.sqrt(T)
+
+
+def not_tower_threshold_numeric(n, xi, bracket=None):
+    """
+    命題16を数値的に検証するヘルパー。not_composition_tower(x,n,xi)=0.5
+    となるxを二分法(bisection)で求める。scipyのbrentqではなく
+    自前の二分法を使うのは、xiが非常に小さいとき(や、nが大きい
+    とき)にnot_composition_towerの値がfloat64の精度限界付近まで
+    圧縮されてしまい、brentqの収束判定が不安定になることがある
+    ため(開発時にmpmathの多倍長精度でこの問題を確認・回避した)。
+
+    戻り値: 二分法で求めた閾値x*(float)。not_tower_thresholdの
+    予測値と比較するために使う。
+    """
+    pred = not_tower_threshold(n, xi)
+    lo, hi = pred * 1e-3, pred * 1e3
+
+    def f(x):
+        return not_composition_tower(x, n, xi) - 0.5
+
+    flo = f(lo)
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        fmid = f(mid)
+        if (fmid > 0) == (flo > 0):
+            lo, flo = mid, fmid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def or_n_trigger_condition_is_not_necessary(xi, n_trials=20000, seed=0, margin=3.0):
+    """
+    【命題10の必要性についての追加調査(v0.34)】命題10の条件
+    (少なくとも1つの値がxi*(C*(xi)+margin)を超える)は**十分条件**
+    であって**必要条件ではない**ことを数値で確認するヘルパー。
+
+    全部の値がこの閾値を下回るように乱数生成しても(=命題10の条件が
+    成立しない状況を作っても)、naive foldとOR_n融合版が実際には
+    高い確率で一致する(gapが小さい)ことを確認できる。逆に、
+    Prop9(命題9)の"総和"の閾値との相関を見ても、良い一致と悪い
+    不一致のグループでmargin(総和が閾値をどれだけ超えているか)の
+    分布が大きく重なっており、単純な閾値では両者をきれいに
+    分離できない——つまり「naive foldとOR_n融合版が一致するための
+    必要十分条件」は、個々の値の最大値や総和のような単純な集計量
+    だけでは決まらず、畳み込みの順序や個々の値の並び方に依存する、
+    より複雑な条件である可能性が高い。
+
+    戻り値: {"good_match_rate": 全部の値が閾値未満のときにgap<0.01と
+    なる割合, "severe_mismatch_rate": 同条件でgap>0.5となる割合}
+    (両方とも0でも1でもない、中間的な値になるはず——これが
+    「命題10の条件が必要条件ではない」ことの数値的な確認)。
+    """
+    rng = np.random.default_rng(seed)
+    C = or_n_threshold_Cstar(xi) + margin
+    threshold = xi * C
+
+    def NOT(x):
+        return 1 - _reg(x, xi)
+
+    def OR2(x, y):
+        return NOT(NOT(x) * NOT(y))
+
+    def naive_fold(vals):
+        acc = vals[0]
+        for v in vals[1:]:
+            acc = OR2(acc, v)
+        return acc
+
+    def fused(vals):
+        prod = 1.0
+        for v in vals:
+            prod = prod * NOT(v)
+        return 1 - _reg(prod, xi)
+
+    good, severe = 0, 0
+    for _ in range(n_trials):
+        n = rng.integers(3, 15)
+        vals = rng.uniform(-threshold * 0.99, threshold * 0.99, n)
+        gap = abs(naive_fold(vals) - fused(vals))
+        if gap < 0.01:
+            good += 1
+        elif gap > 0.5:
+            severe += 1
+
+    return {"good_match_rate": good / n_trials, "severe_mismatch_rate": severe / n_trials}

@@ -26,7 +26,7 @@ from .info_theory import (
 )
 from .topology import morse_index, euler_characteristic
 from .spacetime import inside_lightcone, future_lightcone
-from .bridge import floor_smooth, sum_via_integral, gamma_via_riemann_sum
+from .bridge import floor_smooth, sum_via_integral, product_via_integral, gamma_via_riemann_sum
 from .electronic_structure import (
     fermi_occupation, tight_binding_chain_energies,
     find_chemical_potential, total_energy_smeared,
@@ -38,12 +38,25 @@ from .theory import (
     or_gradient_closed_form, gradient_landscape_stats, or_fusion_disagreement_rate,
     and_partial_dilation_invariance, or_breaks_partial_dilation_invariance,
     or_second_resonance_w0, or_second_resonance_location, or_second_resonance_numeric_argmax,
+    or_full_gradient_magnitude_argmax,
     or_misclassification_boundary_sum, or_misclassification_boundary_numeric, or_value,
     or_n_misclassification_K, or_n_misclassification_boundary_sum,
     or_n_misclassification_boundary_numeric, or_n_value,
     or_n_threshold_Cstar, or_n_fold_error_bound, or_n_fusion_is_safe, or_n_naive_fold,
+    or_n_trigger_condition_is_not_necessary,
+    nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
+    nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
+    xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
+    xor_diagonal_lower_threshold, xor_diagonal_upper_threshold, xor_diagonal_threshold_numeric,
+    xnor_zero_cross_section_threshold, xnor_zero_cross_section_numeric,
+    not_composition_tower, not_tower_threshold, not_tower_threshold_numeric,
 )
-from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
+from .dynamics import (
+    force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate,
+    not_map_fixed_point, not_map_multiplier, not_map_critical_xi,
+    squared_map_cubic_coefficient, squared_map_convergence_exponent,
+    asymptotic_fatou_coordinate, asymptotic_fatou_coordinate_local_check,
+)
 from .identities import (
     rapidity, addition, n_tuple_angle, lambert_continued_fraction,
     mittag_leffler_sum, weierstrass_product, gudermannian, verify_identities,
@@ -76,7 +89,7 @@ __all__ = [
     "fisher_information_gaussian", "de_bruijn_check",
     "morse_index", "euler_characteristic",
     "inside_lightcone", "future_lightcone",
-    "floor_smooth", "sum_via_integral", "gamma_via_riemann_sum",
+    "floor_smooth", "sum_via_integral", "product_via_integral", "gamma_via_riemann_sum",
     "fermi_occupation", "tight_binding_chain_energies",
     "find_chemical_potential", "total_energy_smeared",
     "tight_binding_dos_continuum", "continuum_filling", "continuum_energy", "continuum_find_mu",
@@ -85,11 +98,22 @@ __all__ = [
     "or_gradient_closed_form", "gradient_landscape_stats", "or_fusion_disagreement_rate",
     "and_partial_dilation_invariance", "or_breaks_partial_dilation_invariance",
     "or_second_resonance_w0", "or_second_resonance_location", "or_second_resonance_numeric_argmax",
+    "or_full_gradient_magnitude_argmax",
     "or_misclassification_boundary_sum", "or_misclassification_boundary_numeric", "or_value",
     "or_n_misclassification_K", "or_n_misclassification_boundary_sum",
     "or_n_misclassification_boundary_numeric", "or_n_value",
     "or_n_threshold_Cstar", "or_n_fold_error_bound", "or_n_fusion_is_safe", "or_n_naive_fold",
+    "or_n_trigger_condition_is_not_necessary",
+    "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
+    "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
+    "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
+    "xor_diagonal_lower_threshold", "xor_diagonal_upper_threshold", "xor_diagonal_threshold_numeric",
+    "xnor_zero_cross_section_threshold", "xnor_zero_cross_section_numeric",
+    "not_composition_tower", "not_tower_threshold", "not_tower_threshold_numeric",
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
+    "not_map_fixed_point", "not_map_multiplier", "not_map_critical_xi",
+    "squared_map_cubic_coefficient", "squared_map_convergence_exponent",
+    "asymptotic_fatou_coordinate", "asymptotic_fatou_coordinate_local_check",
     "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
     "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
     "integral_of_k", "integral_of_reg", "integral_of_NOT", "integral_of_AND_wrt_a", "integral_of_sech",
@@ -100,4 +124,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.23.0"
+__version__ = "0.35.0"
