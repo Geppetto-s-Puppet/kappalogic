@@ -28,6 +28,14 @@ def sgn(x, xi=DEFAULT_XI, kernel=DEFAULT_KERNEL):
     return apply_kernel(x, xi, kernel)
 
 
+# v0.13: `sgn`の別名。TODO.mdのF項(命名統一)を受けての省略記法。
+# 中身はsgnと完全に同一(同じ関数オブジェクト)なので、
+# k(x) と書いても sgn(x) と書いても後方互換的に同じ結果になる。
+# なお identities.py の恒等式群はすべて kernel="tanh" のときの
+# k(x)=tanh(x/xi) を前提にしている(erf/algebraicには一般には拡張されない)。
+k = sgn
+
+
 def reg(x, xi=DEFAULT_XI, kernel=DEFAULT_KERNEL):
     """sgn(x)^2: x!=0 -> 1, x=0 -> 0 (符号情報は失われる)"""
     return sgn(x, xi, kernel) ** 2

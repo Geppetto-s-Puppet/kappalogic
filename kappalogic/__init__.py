@@ -1,5 +1,5 @@
 from .core import (
-    sgn, reg, NOT, AND, OR, NAND, NOR, XOR, XNOR, AND_n, OR_n,
+    sgn, k, reg, NOT, AND, OR, NAND, NOR, XOR, XNOR, AND_n, OR_n,
     eq, neq, gt, lt, ge, le, DEFAULT_XI, DEFAULT_KERNEL,
 )
 from .funcs import intf, par, maxf, minf, clamp
@@ -32,11 +32,25 @@ from .electronic_structure import (
     find_chemical_potential, total_energy_smeared,
     tight_binding_dos_continuum, continuum_filling, continuum_energy, continuum_find_mu,
 )
-from .theory import max_gradient_location, max_gradient_value, is_single_passing_at_zero, fusion_is_safe
+from .theory import (
+    max_gradient_location, max_gradient_value, is_single_passing_at_zero, fusion_is_safe,
+    or_gradient_closed_form, gradient_landscape_stats, or_fusion_disagreement_rate,
+)
 from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
+from .identities import (
+    rapidity, addition, n_tuple_angle, lambert_continued_fraction,
+    mittag_leffler_sum, weierstrass_product, gudermannian, verify_identities,
+)
+from .gauge import (
+    xi_dilation_equals_x_dilation, dilation_generator_matches_xi_generator,
+    translation_dilation_algebra, hyperbolic_metric_is_scale_invariant,
+    killing_vectors_of_xi_halfplane, geodesic_conserved_quantities,
+    local_xi_connection_symbolic, local_xi_connection_numeric,
+    verify_gauge_structure,
+)
 
 __all__ = [
-    "sgn", "reg", "NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "AND_n", "OR_n",
+    "sgn", "k", "reg", "NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "AND_n", "OR_n",
     "eq", "neq", "gt", "lt", "ge", "le", "DEFAULT_XI", "DEFAULT_KERNEL",
     "intf", "par", "maxf", "minf", "clamp",
     "kronecker_delta", "levi_civita", "dirac_delta_integral",
@@ -59,7 +73,15 @@ __all__ = [
     "find_chemical_potential", "total_energy_smeared",
     "tight_binding_dos_continuum", "continuum_filling", "continuum_energy", "continuum_find_mu",
     "max_gradient_location", "max_gradient_value", "is_single_passing_at_zero", "fusion_is_safe",
+    "or_gradient_closed_form", "gradient_landscape_stats", "or_fusion_disagreement_rate",
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
+    "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
+    "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
+    "xi_dilation_equals_x_dilation", "dilation_generator_matches_xi_generator",
+    "translation_dilation_algebra", "hyperbolic_metric_is_scale_invariant",
+    "killing_vectors_of_xi_halfplane", "geodesic_conserved_quantities",
+    "local_xi_connection_symbolic", "local_xi_connection_numeric",
+    "verify_gauge_structure",
 ]
 
-__version__ = "0.12.0"
+__version__ = "0.14.0"
