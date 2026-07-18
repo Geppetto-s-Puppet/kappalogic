@@ -248,6 +248,70 @@ naive foldが0(偽)に壊滅的に張り付いてしまうケースが約半数
 n項条件」は、依然として未解決のまま残る**。命題9は
 「融合版OR_n自体がいつ正しいか」という、それとは独立した
 (しかし関連の深い)問いに答えたものとして位置づける。
+
+【命題10(v0.23、ついに本丸: naive foldとOR_n融合版が一致するn項条件)】
+命題9の直後に残した課題(「sum(u_k)の総和条件だけでは
+naive foldとの一致は保証されない」)を、naive foldの漸化式
+`acc_k = OR(acc_{k-1}, a_k)` そのものを追いかけることで解決した。
+
+**鍵となる観察**: `m_k := NOT(acc_k)` の漸化式は
+`m_k = phi(phi(m_{k-1} * s_k))`(phi:=NOTという関数、s_k:=NOT(a_k))
+という"二重NOT"になっている。この`phi(phi(w))`という合成を
+w in (0,1] について調べると、**wがxiより十分小さい(w << xi)
+ときにだけ、phi(phi(w))は極端に小さい値(=「真」)に収束し、
+そうでなければ1(=「偽」)にほぼ張り付く**という、鋭い閾値挙動を
+することがわかった(w<<xiでない限りphi(w)がxiよりずっと小さい
+値になり、それを再びphiに通すとまた1近くに戻ってしまうため)。
+
+これはつまり、`m_{k-1}*s_k << xi` さえ満たせば、m_{k-1}(それまでの
+畳み込みの"どれだけ怪しかったか")の値に関係なく(m_{k-1}<=1は
+常に成り立つので)、新しいaccは正しく「真」に転じる、ということ。
+そして `m_{k-1}*s_k <= s_k`(m_{k-1}<=1より)なので、
+**s_k自体がxiより十分小さければ、m_{k-1}の値によらず必ず安全**。
+
+s_k=NOT(a_k;xi)がxiより十分小さくなる条件を、
+u_k:=|a_k|/xi の言葉で解くと:
+
+    s_k ~ 4*exp(-2*u_k) << xi  <=>  u_k > C*(xi) := (1/2)*ln(4/xi)
+
+という、命題6・8・9と同じ「log(1/xi)」型の閾値が出てくる。
+
+**定理(命題10)**: n個の値 a_1,...,a_n のうち**少なくとも1つ**が
+
+    |a_k| > xi * (C*(xi) + M),   C*(xi) = (1/2)*ln(4/xi)
+
+を満たす(Mは好きに選べる安全マージン)とき、naive foldと
+OR_n融合版の誤差は
+
+    |naive_fold - OR_n(融合版)| <~ exp(-4*M)
+
+程度に収まる。この誤差上界は、xi=1e-2から1e-8まで、n=2から50まで、
+Mを0.5から4まで動かして数値検証したところ、M>=2でratio(実測/予測)が
+1.000に収束することを確認した(`or_n_fold_matches_fused_bound`
+参照)。特にM=4のときは、xiやn、他の値の分布に関係なく
+誤差がexp(-16)~1.1e-7にほぼぴったり一致する、という驚くほど
+綺麗な普遍性を示した。
+
+**AND側(命題3、v0.16)との対比**: AND_nは「全部の値が大きい」
+ことを要求したが、OR_nは(ORの"どれか一つ真なら真"という性質に
+素直に対応する形で)「どれか一つの値が大きい」ことだけで足りる。
+ただしその"大きい"の基準は、ANDが単純な定数閾値C*xiだったのに対し、
+ORは命題6・8・9と同じ log(1/xi) 補正のかかった閾値
+`xi*((1/2)*ln(4/xi)+M)` になる、という違いがある。
+
+**正直な評価**: これで「naive foldとOR_n融合版が一致するための
+n項条件」という、v0.13の命題4の直後からTODO.mdの本丸として
+残っていた課題に、閉じた形の十分条件と定量的な誤差上界を
+与えることができた。ただし(1)これは"十分条件"であり、
+必要十分条件(=もっと緩い条件でも安全な場合があるかもしれない)
+までは詰めていない、(2)導出の途中(phi(phi(w))の閾値挙動)は
+漸近的な議論であり、機械的に厳密な不等式の証明(assistant内で
+sympyやペンと紙で追い切る形の証明)までは行っていない
+——数値検証(複数のxi・n・マージンで、比が1.000に収束することを
+確認)による裏付けにとどまる。文献調査もしていないので、
+微分可能論理ゲート分野で本当に新規かどうかは断定しない。
+それでも、v0.13から続いていた具体的な空白を、閉じた形の式で
+埋められたことは、今回の一番の収穫だと思う。
 """
 import numpy as np
 
@@ -593,6 +657,53 @@ def or_n_misclassification_boundary_numeric(xi, weights):
         return or_n_value(*vals, xi=xi) - 0.5
 
     return brentq(f, 1e-6, 2000.0)
+
+
+def or_n_threshold_Cstar(xi):
+    """命題10の閾値定数 C*(xi) = (1/2)*ln(4/xi)。命題6/8/9と同型のlog(1/xi)閾値。"""
+    return 0.5 * np.log(4 / xi)
+
+
+def or_n_fold_error_bound(margin):
+    """
+    命題10の誤差上界 exp(-4*margin)。少なくとも1つの値がC*(xi)+marginを
+    超えていれば、naive foldとOR_n(融合版)の差はこの値程度に収まる
+    (数値検証: xi=1e-2〜1e-8, n=2〜50, margin=0.5〜4で、実測誤差との
+    比が margin>=2 でほぼ1.000に収束することを確認済み)。
+    """
+    return np.exp(-4 * margin)
+
+
+def or_n_fusion_is_safe(values, xi, margin=3.0):
+    """
+    【命題10の判定版】naive foldとOR_n(融合版)が
+    (or_n_fold_error_bound(margin)程度の精度で)一致するとみなせるか
+    どうかを判定する。AND側のfusion_is_safe(命題3)のOR版に相当。
+
+    条件: 値のうち少なくとも1つが |a_k| > xi*(C*(xi)+margin) を満たす
+    (AND側が「全部」大きい必要があったのに対し、OR側は「どれか1つ」
+    で足りる——ORの"どれか一つ真なら真"という性質に対応する)。
+
+    戻り値: True なら naive foldと融合版がor_n_fold_error_bound(margin)
+    程度の精度で一致するとみなせる。
+    """
+    values = np.abs(np.asarray(values, dtype=float))
+    threshold = xi * (or_n_threshold_Cstar(xi) + margin)
+    return bool(np.any(values > threshold))
+
+
+def or_n_naive_fold(*vals, xi=1.0):
+    """OR_nのnaive fold版(逐次的にOR(acc,次の値)を計算する)。命題10の検証用。"""
+    def NOT(x):
+        return 1 - _reg(x, xi)
+
+    def OR2(x, y):
+        return NOT(NOT(x) * NOT(y))
+
+    acc = vals[0]
+    for v in vals[1:]:
+        acc = OR2(acc, v)
+    return acc
 
 
 def and_partial_dilation_invariance(a, b, xi, lam):

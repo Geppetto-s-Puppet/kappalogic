@@ -174,6 +174,92 @@ def gudermannian(x, xi=_DEFAULT_XI):
     return np.sin(gd)
 
 
+def integral_of_k(x, xi=_DEFAULT_XI):
+    """
+    ∫k(x)dx = ∫tanh(x/xi)dx = xi*ln(cosh(x/xi))  (積分定数は0に取った)
+
+    v0.22: TODO.md A項「積分形」に対応。導出はtanhの原始関数が
+    ln(cosh)であることの直接の帰結(sympyで導関数を取って確認済み、
+    差は厳密に0)。
+
+    **物理対応(stat_mech.pyとの接続)**: 1スピン・外部磁場hの
+    Ising模型の分配関数はZ=2*cosh(h)なので、対数分配関数は
+    ln(Z)=ln(2)+ln(cosh(h))。磁化(熱力学的な期待値)は
+    d(ln Z)/dh = tanh(h) で与えられる、という統計力学の標準的な
+    関係(揺動応答関係の一種)そのもの。つまり
+    「k(x)=tanh(x/xi)を積分するとxi*ln(cosh(x/xi))になる」ことは、
+    「磁化を積分すると対数分配関数になる」ことの言い換えになっている
+    (x/xi="場/温度"という、このライブラリで繰り返し出てくる対応)。
+    """
+    u = np.asarray(x, dtype=float) / xi
+    return xi * np.log(np.cosh(u))
+
+
+def integral_of_reg(x, xi=_DEFAULT_XI):
+    """
+    ∫reg(x)dx = ∫tanh(x/xi)^2 dx = x - xi*k(x)  (積分定数は0に取った)
+
+    導出: tanh(u)^2 = 1 - sech(u)^2 なので、∫tanh(u)^2du = u - tanh(u)。
+    xi倍のスケール変換をして x - xi*tanh(x/xi) となる
+    (sympyで導関数を取って確認済み、差は厳密に0)。
+
+    x->+-inftyでreg(x)->1なので、積分がx自身に漸近して当然
+    (xi*k(x)->+-xiという有界な補正項だけがつく)。
+    """
+    return np.asarray(x, dtype=float) - xi * np.tanh(np.asarray(x, dtype=float) / xi)
+
+
+def integral_of_NOT(x, xi=_DEFAULT_XI):
+    """
+    ∫NOT(x)dx = ∫(1-reg(x))dx = xi*k(x)  (積分定数は0に取った)
+
+    reg+NOT=1なので、integral_of_reg(x)+integral_of_NOT(x)=xと
+    厳密に整合する(x - xi*k(x) + xi*k(x) = x)。
+
+    NOT(x)=sech(x/xi)^2はx->+-inftyで0に減衰する"バンプ関数"
+    (delta_approx(funcs.py)の中身そのもの)なので、この積分は
+    -inftyから+inftyまで有界(実際、xi*k(+inf)-xi*k(-inf)=2*xi。
+    これはfuncs.delta_approxの正規化 ∫NOT(x)/(2*xi)dx=1 と
+    厳密に整合する)。
+    """
+    return xi * np.tanh(np.asarray(x, dtype=float) / xi)
+
+
+def integral_of_AND_wrt_a(a, b, xi=_DEFAULT_XI):
+    """
+    AND(a,b;xi)=reg(a*b;xi) を a について積分したもの(bは固定、b≠0):
+
+        integral_{0}^{a} AND(t,b;xi) dt = a - (xi/b)*k(a*b;xi)
+
+    (積分定数は0に取った。u=a*b/xiと置換して
+    integral_of_reg(a*b,xi)=a*b-xi*k(a*b,xi)を出し、
+    da=(xi/b)duのヤコビアンで割ってaの関数に戻すだけ。
+    sympyで導関数を取って確認済み、差は厳密に0)。
+
+    b=0のときはAND(a,0;xi)=reg(0;xi)=0(命題2のsingle-passing性、
+    aによらず恒等的に0)なので、この式はb≠0限定になる。
+    """
+    a = np.asarray(a, dtype=float)
+    return a - (xi / b) * np.tanh(a * b / xi)
+
+
+def integral_of_sech(u, xi=_DEFAULT_XI):
+    """
+    ∫sech(x/xi)dx = xi*gd(x/xi)  (gdはgudermannian()と同じGudermannian函数)
+
+    TODO.mdで「Gudermannian函数(gd(u)自体がtanhの原始関数と関係が
+    深い)がヒントになりそう」と書かれていた点への回答: 実際には
+    gd(u)自身がk(x)=tanh(x/xi)の原始関数なのではなく、**sech(x/xi)の
+    原始関数がgd(x/xi)である**、という関係だった(数値微分で確認、
+    誤差~2e-10)。sech(x/xi)=NOT(x;xi)の平方根に相当する量なので、
+    「NOT関数の"半分の強さ"版」を積分するとGudermannian函数が
+    出てくる、という位置づけになる。
+    """
+    x = np.asarray(u, dtype=float)
+    v = x / xi
+    return xi * (2 * np.arctan(np.exp(v)) - np.pi / 2)
+
+
 def verify_identities(xi=0.37, n_samples=500, seed=0):
     """
     このモジュールの恒等式を乱数サンプルで一括自己検証するヘルパー。

@@ -2,7 +2,7 @@ from .core import (
     sgn, k, reg, NOT, AND, OR, NAND, NOR, XOR, XNOR, AND_n, OR_n,
     eq, neq, gt, lt, ge, le, DEFAULT_XI, DEFAULT_KERNEL,
 )
-from .funcs import intf, par, maxf, minf, clamp
+from .funcs import intf, par, maxf, minf, clamp, modf, delta_approx
 from .applications import (
     kronecker_delta, levi_civita, dirac_delta_integral,
     line_intersection_y, collatz_step, collatz_sequence,
@@ -41,11 +41,13 @@ from .theory import (
     or_misclassification_boundary_sum, or_misclassification_boundary_numeric, or_value,
     or_n_misclassification_K, or_n_misclassification_boundary_sum,
     or_n_misclassification_boundary_numeric, or_n_value,
+    or_n_threshold_Cstar, or_n_fold_error_bound, or_n_fusion_is_safe, or_n_naive_fold,
 )
 from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
 from .identities import (
     rapidity, addition, n_tuple_angle, lambert_continued_fraction,
     mittag_leffler_sum, weierstrass_product, gudermannian, verify_identities,
+    integral_of_k, integral_of_reg, integral_of_NOT, integral_of_AND_wrt_a, integral_of_sech,
 )
 from .gauge import (
     xi_dilation_equals_x_dilation, dilation_generator_matches_xi_generator,
@@ -58,7 +60,7 @@ from .gauge import (
 __all__ = [
     "sgn", "k", "reg", "NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "AND_n", "OR_n",
     "eq", "neq", "gt", "lt", "ge", "le", "DEFAULT_XI", "DEFAULT_KERNEL",
-    "intf", "par", "maxf", "minf", "clamp",
+    "intf", "par", "maxf", "minf", "clamp", "modf", "delta_approx",
     "kronecker_delta", "levi_civita", "dirac_delta_integral",
     "line_intersection_y", "collatz_step", "collatz_sequence",
     "choc_bar_source",
@@ -86,9 +88,11 @@ __all__ = [
     "or_misclassification_boundary_sum", "or_misclassification_boundary_numeric", "or_value",
     "or_n_misclassification_K", "or_n_misclassification_boundary_sum",
     "or_n_misclassification_boundary_numeric", "or_n_value",
+    "or_n_threshold_Cstar", "or_n_fold_error_bound", "or_n_fusion_is_safe", "or_n_naive_fold",
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
     "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
     "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
+    "integral_of_k", "integral_of_reg", "integral_of_NOT", "integral_of_AND_wrt_a", "integral_of_sech",
     "xi_dilation_equals_x_dilation", "dilation_generator_matches_xi_generator",
     "translation_dilation_algebra", "hyperbolic_metric_is_scale_invariant",
     "killing_vectors_of_xi_halfplane", "geodesic_conserved_quantities",
@@ -96,4 +100,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.20.0"
+__version__ = "0.23.0"
