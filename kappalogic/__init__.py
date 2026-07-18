@@ -23,6 +23,8 @@ from .stat_mech import box_partition_function, box_partition_function_exact, wit
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
     fisher_information_gaussian, de_bruijn_check,
+    fisher_metric_gaussian, fisher_metric_matches_gauge_hyperbolic_metric,
+    fisher_gaussian_curvature,
 )
 from .topology import morse_index, euler_characteristic
 from .spacetime import inside_lightcone, future_lightcone
@@ -44,6 +46,8 @@ from .theory import (
     or_n_misclassification_boundary_numeric, or_n_value,
     or_n_threshold_Cstar, or_n_fold_error_bound, or_n_fusion_is_safe, or_n_naive_fold,
     or_n_trigger_condition_is_not_necessary,
+    xor_2d_boundary_v_given_large_u, xor_2d_boundary_numeric,
+    xnor_2d_boundary_v_given_large_u, xnor_2d_boundary_numeric,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -87,6 +91,8 @@ __all__ = [
     "box_partition_function", "box_partition_function_exact", "witten_index_toy",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
+    "fisher_metric_gaussian", "fisher_metric_matches_gauge_hyperbolic_metric",
+    "fisher_gaussian_curvature",
     "morse_index", "euler_characteristic",
     "inside_lightcone", "future_lightcone",
     "floor_smooth", "sum_via_integral", "product_via_integral", "gamma_via_riemann_sum",
@@ -104,6 +110,8 @@ __all__ = [
     "or_n_misclassification_boundary_numeric", "or_n_value",
     "or_n_threshold_Cstar", "or_n_fold_error_bound", "or_n_fusion_is_safe", "or_n_naive_fold",
     "or_n_trigger_condition_is_not_necessary",
+    "xor_2d_boundary_v_given_large_u", "xor_2d_boundary_numeric",
+    "xnor_2d_boundary_v_given_large_u", "xnor_2d_boundary_numeric",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -124,4 +132,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.35.0"
+__version__ = "0.40.0"

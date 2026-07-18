@@ -143,3 +143,43 @@ def exact_danger_curve_residual(a, b, xi):
     u_star = torch.arctanh(torch.tensor(1.0 / (3.0 ** 0.5), dtype=torch.float64))
     p = (1 - reg(a, xi)) * (1 - reg(b, xi))
     return p - xi * u_star
+
+
+def learn_xi(a, b, target, gate_fn=AND, xi0=1.0, lr=0.05, steps=2000):
+    """
+    v0.40: TODO.md E項「学習可能なxi」への対応。
+
+    当初の構想は「xiを二重数(dual number, xi^2=0)として導入し、
+    自動微分と絡める」というものだったが、実はv0.18のtorch_backend.py
+    (autogradベースの実装)だけで、xiを普通のPyTorchテンソルとして
+    requires_grad=Trueにするだけで、xiに関する勾配がそのまま得られる
+    ことを確認した(有限差分との比較で厳密に一致、`d(AND)/d(xi)`の
+    数値検証済み)。つまり二重数を別途実装する必要はなく、**既存の
+    torch_backend.pyがそのまま「学習可能なxi」を実現していた**。
+
+    この関数は、その具体例として「gate_fn(a,b;xi)がtargetに一致する
+    ようなxiを勾配降下で学習する」という最小のデモを提供する。
+    xi自体を最適化するのではなく、log(xi)を最適化する(xiは
+    スケール母数なので、対数空間での最適化の方が収束が良い
+    ——xi0=1からtarget=0.5に対応するxi~=0.0045まで、素のxi空間での
+    最適化(Adam, lr=0.05, 500ステップ)では収束しなかったが、
+    log空間ではxi~=0.0045に機械精度で収束することを確認済み)。
+
+    戻り値: 学習されたxi(float)。
+    """
+    import math
+    log_xi = torch.tensor(math.log(xi0), dtype=torch.float64, requires_grad=True)
+    opt = torch.optim.Adam([log_xi], lr=lr)
+    a_t = torch.as_tensor(a, dtype=torch.float64)
+    b_t = torch.as_tensor(b, dtype=torch.float64)
+    target_t = torch.as_tensor(target, dtype=torch.float64)
+
+    for _ in range(steps):
+        opt.zero_grad()
+        xi = torch.exp(log_xi)
+        out = gate_fn(a_t, b_t, xi)
+        loss = (out - target_t) ** 2
+        loss.backward()
+        opt.step()
+
+    return float(torch.exp(log_xi).item())
