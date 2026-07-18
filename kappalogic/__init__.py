@@ -38,6 +38,9 @@ from .theory import (
     or_gradient_closed_form, gradient_landscape_stats, or_fusion_disagreement_rate,
     and_partial_dilation_invariance, or_breaks_partial_dilation_invariance,
     or_second_resonance_w0, or_second_resonance_location, or_second_resonance_numeric_argmax,
+    or_misclassification_boundary_sum, or_misclassification_boundary_numeric, or_value,
+    or_n_misclassification_K, or_n_misclassification_boundary_sum,
+    or_n_misclassification_boundary_numeric, or_n_value,
 )
 from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
 from .identities import (
@@ -80,6 +83,9 @@ __all__ = [
     "or_gradient_closed_form", "gradient_landscape_stats", "or_fusion_disagreement_rate",
     "and_partial_dilation_invariance", "or_breaks_partial_dilation_invariance",
     "or_second_resonance_w0", "or_second_resonance_location", "or_second_resonance_numeric_argmax",
+    "or_misclassification_boundary_sum", "or_misclassification_boundary_numeric", "or_value",
+    "or_n_misclassification_K", "or_n_misclassification_boundary_sum",
+    "or_n_misclassification_boundary_numeric", "or_n_value",
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
     "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
     "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
@@ -90,4 +96,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.18.0"
+__version__ = "0.20.0"

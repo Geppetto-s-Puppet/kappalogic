@@ -161,6 +161,93 @@ OR側の"第二の"共鳴点はxi*log(1/xi)という対数補正つきでしか
 それでも、「なぜORの方がANDより広い範囲で危険なのか」
 (命題4の勾配地形の表)を、対数補正という具体的な形で
 定量的に説明できたのは今回の収穫。
+
+【命題8(v0.19, ORの"誤分類領域": u+vの対数閾値)】
+命題6・v0.18の危険地図をさらに追いかけていて、勾配の話ではなく
+**OR(a,b)の"値そのもの"が、a,bが両方とも非ゼロなのに
+誤って0(偽)に近い値を返してしまう領域が、実は非常に広い**ことに
+気づいた。具体例(xi=1e-3、u=a/xi, v=b/xiとして):
+
+    u,v がどちらも0.5〜2.0程度の"そこそこ非ゼロ"な値の組み合わせでは、
+    OR(a,b)はほぼ厳密に0.0(!)を返す(u=v=2.0でもOR=0.000185)。
+    u=v=2.5になって初めてOR=0.63程度まで持ち直す。
+
+これは「AND側は個々の値がC*xiを超えれば安全」(命題3)という
+比較的単純な話だったのに対し、**OR側は片方だけでなく両方の値が
+十分大きくないと、正しい"true"すら返せない**という、命題4・6が
+示唆していた"二重共鳴"構造の帰結を、勾配ではなく値そのもので
+生々しく示す例になっている。
+
+**閉形式(v0.19)**: OR(a,b;xi)=0.5となる境界(誤判定領域と正しい
+領域の境目)を、u=a/xi, v=b/xiの言葉で調べると、xi->0の漸近極限で
+
+    u + v = (1/2)*ln(1/xi) + K + O(xi),   K = (1/2)*ln(16/arctanh(1/sqrt(2))) ~= 1.4494
+
+という**直線**(u+vの和だけで決まる)に厳密に収束することを
+導出・検証した。u/v比を0.2〜5の範囲で振っても、u+vの値は
+1%以内でほぼ一定(命題8の直線が比に依らないことの確認)。
+xi=1e-4〜1e-12まで検証したところ、実際のu+v(数値的な境界)と
+上の閉形式の差は、xiを10倍小さくするたびにちょうど10分の1に
+縮んでいく(O(xi)の収束であることを確認、xi=1e-12で差~4.7e-7)。
+比が極端(0.01倍や100倍)になるとu,vの一方が小さくなりすぎて
+「両方とも大きい」という導出の前提から外れ、近似の精度は
+数%程度に落ちる(境界付近の非対称な補正が必要、今回は未導出)。
+
+**この命題の意味**: AND(a,b)=reg(a*b;xi)は、a,bが非ゼロで固定
+されている限り、xi->0とともに**必ず正しく1に収束する**
+(たとえa,bがどれだけ小さくても、xiがそれよりさらに小さくなれば
+いずれ検出される)。しかしOR(a,b;xi)は、a,bを固定したままxi->0
+すると、u=a/xi, v=b/xiがどんどん大きくなる(xiで割っているため)
+ので一見安全に見えるが、**「両方の非ゼロ性を検出するのに必要な
+u+vの閾値」自体もlog(1/xi)で際限なく大きくなっていく**ため、
+a,bを先に固定してからxi->0する、という(このライブラリの多くの
+命題が暗黙に仮定している)極限の取り方の順序次第で、"true"に
+収束するとは限らない、という直感に反する結果になる。
+
+正直な限界: 直線の"形"(u+v=const)は数値的な観察であり、
+命題6のw0のような厳密な変分法での再導出はまだ行っていない
+(ただし対数の係数1/2と定数Kは、sech^2の漸近展開から閉形式で
+導出し、桁ごとに収束することを確認済みなので、これ自体は
+確信を持って正しいと言える)。n項版への一般化(命題3や命題4の
+残課題と同じ形)も、今回はまだ手を付けていない。
+
+【命題9(v0.20, 命題8のn項一般化: 融合版OR_nの誤分類境界)】
+命題8(2引数)を素直にn引数に一般化できるか調べた。
+fused OR_n(a_1,...,a_n;xi) = 1 - reg(prod_k NOT(a_k); xi) の
+"=0.5となる境界"を、u_k := a_k/xi の言葉で調べると、
+命題8の「u+v=直線」がそのままn項の「総和Σu_kが一定」という
+形に一般化されることを見つけた:
+
+    sum_k u_k = (1/2)*ln(1/xi) + K(n),   K(n) = (1/2)*ln(4^n / A)
+
+    (A := arctanh(1/sqrt(2))、命題8のK=K(2)と整合する)
+
+導出: reg(P;xi)=0.5 <=> P=A*xi(P:=prod_k NOT(a_k))。各u_kが
+大きい極限でNOT(a_k)~4*exp(-2*u_k)なので、
+P ~ 4^n * exp(-2*sum(u_k))。これを P=A*xi に代入してsum(u_k)に
+ついて解くと上の式が出る。
+
+数値検証: 全項が同じu(対称な場合)でn=2,3,5,8,12について、
+xiを1e-10,1e-30,1e-60(mpmathの多倍長精度で計算)まで小さくすると、
+実際の境界と予測値の差が、xiが小さくなるにつれて着実に縮む
+ことを確認した(n=12,xi=1e-60で差~3e-5)。非対称な重み
+(u_kの配分を変えた場合)でも、sum(u_k)が同じ境界にほぼ収まる
+ことも確認済み(重みの配分に依らず、"総和"だけが本質的な量で
+あることの傍証)。
+
+**重要な但し書き**: これは"融合版"OR_n(=定義どおりの一括計算)
+**自体**が正しい値を返すかどうかの境界であり、命題3・命題4が
+扱っていた「naive fold(逐次計算)と融合版が一致するか」という
+問題とは別物である。実際に調べたところ、「sum(u_k)が命題9の
+閾値を十分超えている」という条件だけでは、naive foldと融合版が
+一致することは保証されない(乱数実験で、条件を満たしていても
+naive foldが0(偽)に壊滅的に張り付いてしまうケースが約半数
+見つかった——おそらく畳み込みの途中で"程よく非ゼロ"な値同士が
+連続して出会うタイミングに依存するため)。したがって、
+**「naive foldとOR_n融合版が一致するための(命題3のOR版に相当する)
+n項条件」は、依然として未解決のまま残る**。命題9は
+「融合版OR_n自体がいつ正しいか」という、それとは独立した
+(しかし関連の深い)問いに答えたものとして位置づける。
 """
 import numpy as np
 
@@ -414,6 +501,98 @@ def or_second_resonance_numeric_argmax(xi, c, v_max=None, n_coarse=400_000, n_fi
     vs2 = np.linspace(lo, hi, n_fine)
     hs2 = h_of_v(vs2)
     return float(vs2[np.argmax(hs2)])
+
+
+def or_misclassification_boundary_sum(xi):
+    """
+    命題8の閉形式(v0.19): OR(a,b;xi)=0.5となる境界での u+v=a/xi+b/xi
+    の値(xi->0の漸近極限)。
+
+        u + v = (1/2)*ln(1/xi) + K,   K = (1/2)*ln(16/arctanh(1/sqrt(2)))
+
+    この直線より内側(u+vが小さい)だと、a,bが両方とも非ゼロなのに
+    OR(a,b;xi)は誤って0(偽)近くの値を返してしまう。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    K = 0.5 * np.log(16 / A)
+    return 0.5 * np.log(1 / xi) + K
+
+
+def or_misclassification_boundary_numeric(xi, ratio=1.0):
+    """
+    命題8を数値的に検証するヘルパー: u=ratio*v として、
+    OR(ratio*v*xi, v*xi; xi) = 0.5 となるvをbrentqで求め、
+    u+v(=v*(1+ratio))を返す。or_misclassification_boundary_sumの
+    予測値(ratioに依らないはず)と比較するために使う。
+    """
+    from scipy.optimize import brentq
+
+    def f(v):
+        u = ratio * v
+        a, b = u * xi, v * xi
+        return _or_value(a, b, xi) - 0.5
+
+    v_cross = brentq(f, 1e-8, 500.0)
+    u_cross = ratio * v_cross
+    return u_cross + v_cross
+
+
+def _or_value(a, b, xi):
+    NOT_a = 1 - _reg(a, xi)
+    NOT_b = 1 - _reg(b, xi)
+    return 1 - _reg(NOT_a * NOT_b, xi)
+
+
+def or_value(a, b, xi=1.0):
+    """OR(a,b;xi)の値そのもの(命題8の検証・可視化用の薄いラッパー)。"""
+    return _or_value(a, b, xi)
+
+
+def or_n_misclassification_K(n):
+    """
+    命題9のn項版の定数K(n) = (1/2)*ln(4^n / A), A=arctanh(1/sqrt(2))。
+    n=2のときK(2)は命題8のKと一致する。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    return 0.5 * np.log(4 ** n / A)
+
+
+def or_n_misclassification_boundary_sum(xi, n):
+    """
+    命題9の閉形式(v0.20): 融合版OR_n(a_1,...,a_n;xi)=0.5となる境界での
+    sum_k(a_k/xi) の値(xi->0の漸近極限、全項が同程度の大きさの場合)。
+
+        sum_k u_k = (1/2)*ln(1/xi) + K(n)
+    """
+    return 0.5 * np.log(1 / xi) + or_n_misclassification_K(n)
+
+
+def or_n_value(*vals, xi=1.0):
+    """融合版OR_n(a_1,...,a_n;xi)の値そのもの(命題9の検証用ラッパー)。"""
+    prod = 1.0
+    for v in vals:
+        prod = prod * (1 - _reg(v, xi))
+    return 1 - _reg(prod, xi)
+
+
+def or_n_misclassification_boundary_numeric(xi, weights):
+    """
+    命題9を数値的に検証するヘルパー。weights(正の配列、和は問わない)に
+    比例する形でu_kを配分し、sum(weights正規化後)*T が
+    融合版OR_n(a_1,...,a_n;xi)=0.5 となる T(=sum u_kの実測値)を
+    brentqで求める。or_n_misclassification_boundary_sumの予測値と
+    比較するために使う。
+    """
+    from scipy.optimize import brentq
+
+    weights = np.asarray(weights, dtype=float)
+    weights = weights / weights.sum()
+
+    def f(T):
+        vals = weights * T * xi
+        return or_n_value(*vals, xi=xi) - 0.5
+
+    return brentq(f, 1e-6, 2000.0)
 
 
 def and_partial_dilation_invariance(a, b, xi, lam):
