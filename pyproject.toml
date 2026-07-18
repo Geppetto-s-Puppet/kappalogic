@@ -4,11 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kappalogic"
-version = "0.14.0"
+version = "0.18.0"
 description = "tanh(x/xi)ベースの擬連続論理ゲート・比較演算子ライブラリ"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["numpy", "scipy", "sympy"]
+
+[project.optional-dependencies]
+torch = ["torch"]
 
 [tool.setuptools.packages.find]
 include = ["kappalogic*"]

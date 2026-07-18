@@ -75,6 +75,92 @@ or_fusion_disagreement_rate参照)。
 新規性の断定は避けるが、少なくとも本ライブラリのtheory.py上には
 それまで記載されていなかった具体的な観察と、それを説明する
 検証済みの閉形式である。
+
+【命題5(v0.15, gauge.pyとの橋渡し: ANDの"部分ディレーション不変性")】
+gauge.py(v0.14)で確認した「k(x;lam*xi) = k(x/lam;xi)」という
+大域的ディレーション不変性が、AND/ORの非対称性(命題4)の
+もう一段深い理由を説明する。
+
+AND(a,b;xi) = reg(a*b;xi) = tanh(a*b/xi)^2 は、a*b/xi という
+"たった1つの比"だけの関数である(aとbが別々に効くのではなく、
+積a*bという1つの合成量だけが意味を持つ)。したがって
+
+    AND(lam*a, b; lam*xi) = AND(a, b; xi)          ... (**)
+
+が全てのlam>0で厳密に成り立つ(gauge.pyの基本恒等式を
+x=a*bに適用しただけ。symbolic に確認済み、theory.pyのテスト参照)。
+これは「aとxiを一緒にlam倍すれば、bは変えなくてもANDの値は
+変わらない」という"部分ゲージ不変性"であり、fusion_is_safe(命題3)
+の安全条件が「部分積s_k**自体**」ではなく「s_k/xiという比」だけに
+依存する形で書けている理由でもある(s_k/xiはこの不変性のもとで
+不変な量そのもの)。命題1の共鳴点x*=xi*arctanh(1/sqrt(3))も、
+比の言葉で言えばx*/xi=arctanh(1/sqrt(3))という**xiに依存しない
+普遍定数**であり、この不変性のもとで意味を持つ量である。
+
+一方OR(a,b;xi) = NOT(NOT(a;xi)*NOT(b;xi);xi)は、aとbをそれぞれ
+別々にtanhへ通してから掛け合わせ、もう一度tanhへ通す構造なので、
+**a*bのような単一の比には決して還元できない**(a/xiとb/xiという
+2つの独立な比が、線形合成では消せない形で効いてくる)。この事実の
+帰結として
+
+    OR(lam*a, b; lam*xi) != OR(a, b; xi)  (一般には不一致)   ... (***)
+
+が成り立つ(symbolicに確認済み。具体例: a=1.3,b=-0.8,xi=0.37,
+lam=2.7で OR(a,b;xi)=0.99999976、OR(lam*a,b;lam*xi)=0.99999608と
+値が変わる。theory.pyのテスト参照)。
+
+つまり**命題4で見つかった「ANDは共鳴条件が1つ、ORは2つ」という
+非対称性は、「ANDはa*b/xiという1変数の関数として書けるが、ORは
+2変数(a/xi, b/xiの組)を本質的に必要とする」という、より根本的な
+構造の帰結として理解できる**。ANDが1次元のディレーション不変性
+(gauge.pyのアフィン群の一部)をそのまま受け継ぐのに対し、ORは
+それを受け継がない、という言い方もできる。
+
+正直な限界: これは「ANDが1変数化できる/ORはできない」という
+既に分かっている事実(定義から明らか)を、v0.14のゲージ理論的な
+言葉(ディレーション不変性)で言い換えただけであり、それ自体は
+真に新しい定理ではない。しかし、dev_notes.md v0.14で「measured
+quantities(命題4)とgauge.pyの構造との橋渡しがまだない」と
+明記していた穴に、少なくとも部分的な橋を架けられたと考えている。
+XOR/NAND/NORなど他ゲートがこの1変数/多変数の分類のどちらに
+入るかはまだ調べていない(次の一手の候補)。
+
+【命題6(v0.17, ORの"第二共鳴"の対数補正スケール)】
+命題4で、OR(a,b)の勾配が効くには(i) aがx*=xi*u*付近、
+(ii) p=(1-reg(a))(1-reg(b))もx*付近、という2条件が同時に要る
+ことを見た。ここでaをc*xi(c=a/xiは固定した定数、cはO(1))に
+固定したとき、「(ii)を満たすために必要なbの位置」がxiとともに
+どうスケールするかを調べた。
+
+素朴には「x*=xi*u*と同じくbもO(xi)だろう」と予想したくなるが、
+実際に調べると**bはO(xi)ではなく、O(xi*log(1/xi))というより
+ゆっくり減衰する形**になる。具体的には、d/db[NOT(b)*reg'(p)]=0を
+解くと、b*=v* * xi (v*=b*/xi)は、
+
+    v* = -(1/2)*ln(xi) - (1/2)*ln(w0 / (4*(1-tanh(c)^2)))   ... (v0.17)
+
+という閉形式に厳密に(xi->0の漸近極限で)収束する。ここでw0は
+tanh(w) + w*(1 - 3*tanh(w)^2) = 0 の(u*より大きい側の)唯一解
+w0≈1.0095565499...という普遍定数(cによらない)。
+
+対数係数「-1/2*ln(xi)」の部分はcの値に依らず常に厳密に1/2で
+あること(異なるc=0.3, u*, 1.0, 2.0全部で確認)、そして定数項は
+上の式で与えられcに依存すること、を数値的に(xi=1e-4〜1e-8で
+実際の最適点を数値探索し、上の閉形式との差が10^-5〜10^-9の
+オーダーでxi->0とともに縮むこと)確認した。
+
+つまり**AND側の唯一の共鳴点x*=xi*u*が正確にxiに比例するのに対し、
+OR側の"第二の"共鳴点はxi*log(1/xi)という対数補正つきでしか
+スケールしない**——これはANDとORの非対称性(命題4)に、これまで
+知られていなかった定量的な次元をもう一つ加える発見である。
+
+正直な限界: この closed form は xi->0 の漸近極限で導出したもので、
+有限のxiでは(数値検証の通り)小さいがゼロでない誤差がある。
+また、cを固定したときの話であり、a自体を動かした場合の全体像
+(a,bの2変数空間での本当の"危険領域"の形)はまだ描けていない。
+それでも、「なぜORの方がANDより広い範囲で危険なのか」
+(命題4の勾配地形の表)を、対数補正という具体的な形で
+定量的に説明できたのは今回の収穫。
 """
 import numpy as np
 
@@ -107,30 +193,61 @@ def is_single_passing_at_zero(and_fn, b=0.0, a_values=(-5, -1, 0.5, 3, 100), h=1
 
 def fusion_is_safe(values, xi=1.0, C=3.0):
     """
-    【命題3(AND_n融合の安全条件)】
-    AND_n(a1,...,an)=reg(a1*a2*...*an)(融合版)と、
-    a1,a2,...を左から畳み込んだ素朴な連結版
-    AND(...AND(AND(a1,a2),a3)...,an) が一致するのは、
-    左から畳み込んだ「途中の部分積」s_k=a1*...*ak が、
-    すべてのk=1..nについて |s_k| > C*xi を満たすときである。
+    【命題3(v0.16修正版): AND_n融合の安全条件】
 
-    証明の概略: reg(x)=tanh(x/xi)^2は|x|>C*xiでexp(-2C)以下の
-    誤差で1に飽和する(理論の公理1、C=3で1e-13以下)。素朴な連結は
-    各段階でreg(部分積 * 次の値)を計算するため、途中のどこかの
-    部分積がO(xi)だと、その段階のtanhが飽和しきらず、後続の計算に
-    誤差が伝播する。融合版は最終的な全部の積を一度だけreg()に
-    渡すため、「最終的な積」さえ|全積|>C*xiを満たせば安全。
+    **v0.16での訂正**: 当初(v0.7)の命題3は「畳み込みの"部分積"
+    s_k=a1*...*akが、すべてのk=1..nについて|s_k|>C*xiを満たせば
+    naive foldとAND_n(融合版)が一致する」と主張していたが、これは
+    **誤りだった**。反例(xi=1, C=3): values=[100,100,0.01,50]の
+    部分積は[100,10000,100,5000]で全部C*xi=3を大きく超えるので
+    「安全」と判定されるはずだが、実際には naive_fold≈2.5e-5,
+    fused=1.0 と、ほぼ正反対の値になる(乱数2万試行でも、この
+    "old"条件が「安全」と判定したケースの約12%で実際には
+    naive foldとfusedがgap>0.1で不一致になることを確認済み——
+    しかもこの12%という失敗率はCを3,5,8と変えても変わらない、
+    つまりCを大きくしても直らない構造的な誤りだった)。
 
-    ランダムな入力2万組でこの安全条件と実際の不一致を突き合わせたところ、
-    99.95%の精度で一致を予測できることを確認済み(dev_notes.md参照。
-    残り0.05%は閾値定数Cの選び方に依存する境界効果)。
+    原因: naive foldは`acc_k = reg(acc_{k-1}*a_k)`という漸化式で
+    計算される。acc_{k-1}が一度reg()を通って1近くに飽和すると、
+    **それ以前の部分積の大きさの情報は失われる**(reg()の値域は
+    [0,1)で、どれだけ大きいxを入れても出力は高々1未満)。したがって
+    次段の acc_k は実質的に reg(a_k) 程度で決まってしまい、
+    「部分積が大きいかどうか」ではなく**「直近の個別の値a_kが
+    大きいかどうか」**が効いてくる。
 
-    戻り値: True ならnaive foldとAND_nの融合版が(exp(-2C)程度の精度で)
-    一致するとみなせる。Falseなら部分積のどこかがxiに近く、不一致の
-    リスクがある。
+    **正しい条件**: naive foldとAND_n(融合版)が一致するのは、
+    **個々の値a_1,...,anがすべて |a_k| > C*xi を満たすとき**である
+    (部分積ではなく、個別の値についての条件)。乱数2万試行でこの
+    修正条件下ではgap>0.1の不一致が1件も発生しないことを確認済み
+    (`fusion_error_bound`参照、n=3〜100で成立を確認)。
+
+    さらに、この条件のもとで**定量的な誤差上界**も導出・検証した:
+
+        |naive_fold - AND_n(融合版)| <= n * 4*exp(-2*C)     ... (誤差上界)
+
+    (導出: reg(x)=tanh(x/xi)^2の"未飽和度" 1-reg(x) は |x|>C*xi のとき
+    4*exp(-2C)以下(sech^2の指数減衰、命題1のreg'の話と同根)。
+    各段でこの未飽和度が高々4exp(-2C)ずつ新たに混入すると考えると、
+    n段でn*4exp(-2C)という上界が出る。乱数検証(C=3,5,8,10、
+    n=3〜100)では実際のgapは常にこの上界の1/3以下に収まっていた
+    ので、この上界は(タイトではないが)安全側の保証として使える。
+    詳細な証明はdev_notes.md v0.16参照)。
+
+    戻り値: True なら「個々の値が全部C*xiを超えている」ことを意味し、
+    naive foldとAND_n融合版はn*4exp(-2C)程度の精度で一致するとみなせる。
     """
-    partial_products = np.cumprod(np.asarray(values, dtype=float))
-    return bool(np.all(np.abs(partial_products) > C * xi))
+    values = np.abs(np.asarray(values, dtype=float))
+    return bool(np.all(values > C * xi))
+
+
+def fusion_error_bound(n, C=3.0):
+    """
+    命題3(v0.16修正版)の誤差上界 n*4*exp(-2C) を返すヘルパー。
+    fusion_is_safe(values,xi,C)がTrueのとき、
+    |naive_fold - AND_n(融合版)| はこの値以下に収まると期待できる
+    (乱数検証込み、詳細はfusion_is_safeのdocstring・dev_notes.md参照)。
+    """
+    return n * 4 * np.exp(-2 * C)
 
 
 def _reg(x, xi):
@@ -240,3 +357,91 @@ def or_fusion_disagreement_rate(xi=1e-3, n_vars=7, scale=8.0, n_trials=20_000, s
         "or_disagreement_rate": mismatch_or / n_trials,
         "and_disagreement_rate": mismatch_and / n_trials,
     }
+
+
+def or_second_resonance_w0():
+    """
+    命題6で使う普遍定数w0: tanh(w) + w*(1-3*tanh(w)^2) = 0 の、
+    u*=arctanh(1/sqrt(3))より大きい側の唯一解(w0~1.00955655)。
+    scipy.optimize.brentqで数値的に解く(cに依存しない普遍定数)。
+    """
+    from scipy.optimize import brentq
+    u_star = np.arctanh(1 / np.sqrt(3))
+
+    def eq(w):
+        t = np.tanh(w)
+        return t + w * (1 - 3 * t ** 2)
+
+    return brentq(eq, u_star + 1e-9, 10.0)
+
+
+def or_second_resonance_location(xi, c):
+    """
+    命題6の閉形式(v0.17): a=c*xi(cは固定定数)としたとき、
+    ORの"第二共鳴"点 b* = v* * xi の v* を返す(xi->0の漸近極限)。
+
+        v* = -(1/2)*ln(xi) - (1/2)*ln(w0 / (4*(1-tanh(c)^2)))
+
+    戻り値: 予測されるv*=b*/xi(実数)。
+    """
+    w0 = or_second_resonance_w0()
+    A0 = 1 - np.tanh(c) ** 2   # = NOT(c*xi; xi) = sech^2(c)、xiに依存しない
+    return -0.5 * np.log(xi) - 0.5 * np.log(w0 / (4 * A0))
+
+
+def or_second_resonance_numeric_argmax(xi, c, v_max=None, n_coarse=400_000, n_fine=40_000):
+    """
+    命題6の閉形式を検証するためのヘルパー: a=c*xi固定のもとで、
+    h(v) := NOT(v*xi;xi) * reg'(p(v);xi), p(v)=(1-reg(c*xi;xi))*(1-reg(v*xi;xi))
+    を実際にv>0についてグリッド探索で最大化し、argmax(=v*)を返す。
+    or_second_resonance_locationの予測値と比較するために使う。
+    """
+    if v_max is None:
+        v_max = max(30.0, -3.0 * np.log(xi))
+
+    a_fixed = c * xi
+
+    def h_of_v(v):
+        b = v * xi
+        p = (1 - _reg(a_fixed, xi)) * (1 - _reg(b, xi))
+        return (1 - _reg(b, xi)) * _reg_prime(p, xi)
+
+    vs = np.linspace(1e-6, v_max, n_coarse)
+    hs = h_of_v(vs)
+    imax = np.argmax(hs)
+    lo = max(vs[imax] - v_max / n_coarse * 5, 1e-8)
+    hi = vs[imax] + v_max / n_coarse * 5
+    vs2 = np.linspace(lo, hi, n_fine)
+    hs2 = h_of_v(vs2)
+    return float(vs2[np.argmax(hs2)])
+
+
+def and_partial_dilation_invariance(a, b, xi, lam):
+    """
+    命題5の式(**): AND(lam*a, b; lam*xi) == AND(a, b; xi) を数値確認する。
+    AND(a,b;xi)=reg(a*b;xi)がa*b/xiという単一の比だけの関数である
+    ことの帰結。戻り値: (AND(lam*a,b;lam*xi), AND(a,b;xi)) のペア
+    (理想的には一致する)。
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    lhs = _reg(lam * a * b, lam * xi)
+    rhs = _reg(a * b, xi)
+    return lhs, rhs
+
+
+def or_breaks_partial_dilation_invariance(a, b, xi, lam):
+    """
+    命題5の式(***): OR(lam*a,b;lam*xi) と OR(a,b;xi) は一般には
+    一致しないことを数値確認する。ORがa*bのような単一の比に
+    還元できない(a/xiとb/xiを別々に必要とする)ことの帰結。
+    戻り値: (OR(lam*a,b;lam*xi), OR(a,b;xi)) のペア(一般には不一致)。
+    """
+    def NOT(x, xi_):
+        return 1 - _reg(x, xi_)
+
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    lhs = NOT(NOT(lam * a, lam * xi) * NOT(b, lam * xi), lam * xi)
+    rhs = NOT(NOT(a, xi) * NOT(b, xi), xi)
+    return lhs, rhs

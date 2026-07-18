@@ -34,7 +34,10 @@ from .electronic_structure import (
 )
 from .theory import (
     max_gradient_location, max_gradient_value, is_single_passing_at_zero, fusion_is_safe,
+    fusion_error_bound,
     or_gradient_closed_form, gradient_landscape_stats, or_fusion_disagreement_rate,
+    and_partial_dilation_invariance, or_breaks_partial_dilation_invariance,
+    or_second_resonance_w0, or_second_resonance_location, or_second_resonance_numeric_argmax,
 )
 from .dynamics import force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate
 from .identities import (
@@ -73,7 +76,10 @@ __all__ = [
     "find_chemical_potential", "total_energy_smeared",
     "tight_binding_dos_continuum", "continuum_filling", "continuum_energy", "continuum_find_mu",
     "max_gradient_location", "max_gradient_value", "is_single_passing_at_zero", "fusion_is_safe",
+    "fusion_error_bound",
     "or_gradient_closed_form", "gradient_landscape_stats", "or_fusion_disagreement_rate",
+    "and_partial_dilation_invariance", "or_breaks_partial_dilation_invariance",
+    "or_second_resonance_w0", "or_second_resonance_location", "or_second_resonance_numeric_argmax",
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
     "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
     "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
@@ -84,4 +90,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.14.0"
+__version__ = "0.18.0"
