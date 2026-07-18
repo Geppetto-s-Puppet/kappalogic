@@ -48,6 +48,8 @@ from .theory import (
     or_n_trigger_condition_is_not_necessary,
     xor_2d_boundary_v_given_large_u, xor_2d_boundary_numeric,
     xnor_2d_boundary_v_given_large_u, xnor_2d_boundary_numeric,
+    exact_not_log_identity, or_n_exact_master_equation_lhs,
+    or_n_exact_master_equation_rhs, or_n_exact_threshold_last_value,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -112,6 +114,8 @@ __all__ = [
     "or_n_trigger_condition_is_not_necessary",
     "xor_2d_boundary_v_given_large_u", "xor_2d_boundary_numeric",
     "xnor_2d_boundary_v_given_large_u", "xnor_2d_boundary_numeric",
+    "exact_not_log_identity", "or_n_exact_master_equation_lhs",
+    "or_n_exact_master_equation_rhs", "or_n_exact_threshold_last_value",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -132,4 +136,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.40.0"
+__version__ = "0.42.0"
