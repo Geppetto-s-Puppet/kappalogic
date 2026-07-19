@@ -299,3 +299,57 @@ def verify_gauge_structure():
     out["local_connection_numeric_max_err"] = float(np.max(np.abs(pp - closed)))
 
     return out
+
+
+def annealed_training_trajectory_hyperbolic_speed(
+    b_fixed=0.3, target=0.7, a0=1.0, xi0=1.0, tau=200.0, lr=0.05, n_steps=2000, sample_every=20,
+):
+    """
+    【v0.48: 訓練軌道と(x,xi)半平面の測地線の接続を試したが不発だった、
+    という調査】
+
+    「xiをアニーリングしながらaを勾配降下で学習する」という現実的な
+    訓練設定(HESTIA/Softsignのような手法、TODO.md参照)を模した軌道
+    (a(t),xi(t))について、双曲計量の"速さ" ds^2=(da^2+dxi^2)/xi^2 が、
+    もし測地線であれば保存するはず、という仮説を検証する。
+
+    実際には、xi(t)=xi0*exp(-t/tau)という外的なアニーリングスケジュール
+    と、aについてのみの勾配降下(AND(a,b_fixed;xi)がtargetに近づく
+    ように)を組み合わせた軌道は、双曲計量の速さを**全く保存しない**
+    ことを確認した(標準偏差/平均の比~4.9、桁違いにばらつく)。
+
+    つまり、gauge.pyの測地線(純粋に計量だけから決まる、力の働かない
+    自由粒子の軌道)と、実際の訓練軌道(損失関数の勾配という"外力"に
+    引きずられる)は、自然には一致しない——geodesic_conserved_quantities
+    が確認する保存則は、(x,xi)半平面上の**自由粒子の運動**について
+    厳密に成り立つものであり、勾配降下という"力を受けた"運動には
+    そのままでは適用できない、という当然と言えば当然の結論に、
+    実際に手を動かして確認する形で辿り着いた。
+
+    戻り値: {"t","a","xi","ds2","cv"}(cv := std(ds2)/mean(ds2)、
+    大きいほど測地線から懸け離れていることを示す)。
+    """
+    a = a0
+    traj_a, traj_xi, traj_t = [], [], []
+    for step in range(n_steps):
+        t = step * 0.5
+        xi = max(xi0 * np.exp(-t / tau), 1e-4)
+        u = np.tanh(a * b_fixed / xi)
+        out = u ** 2
+        d_out_d_a = 2 * u * (1 - u ** 2) * (b_fixed / xi)
+        grad = 2 * (out - target) * d_out_d_a
+        a = a - lr * grad
+        if step % sample_every == 0:
+            traj_a.append(a)
+            traj_xi.append(xi)
+            traj_t.append(t)
+
+    traj_a = np.array(traj_a)
+    traj_xi = np.array(traj_xi)
+    traj_t = np.array(traj_t)
+    da = np.diff(traj_a)
+    dxi = np.diff(traj_xi)
+    xi_mid = (traj_xi[:-1] + traj_xi[1:]) / 2
+    ds2 = (da ** 2 + dxi ** 2) / xi_mid ** 2
+    cv = float(np.std(ds2) / np.mean(ds2))
+    return {"t": traj_t, "a": traj_a, "xi": traj_xi, "ds2": ds2, "cv": cv}

@@ -2,7 +2,7 @@
 kappalogic.theory
 ====================
 reg/AND/OR系(6ゲート: AND, OR, NAND, NOR, XOR, XNOR)の勾配構造・
-誤分類境界を、閉じた形の式として体系的に導出・検証した命題群(命題1〜21)。
+誤分類境界を、閉じた形の式として体系的に導出・検証した命題群(命題1〜22)。
 
 全命題の一覧と数式はREADME.mdの「命題まとめ」表を参照。発見の経緯・
 迷った点はdev_notes.mdを参照。ここでは各関数のdocstringに、対応する
@@ -18,9 +18,16 @@ reg/AND/OR系(6ゲート: AND, OR, NAND, NOR, XOR, XNOR)の勾配構造・
 - 命題11〜20: NAND/NOR/XOR/XNORへの拡張、6ゲート全部の分類と
   (a,b)平面の完全な閉形式。
 - 命題16: 命題11・13・15を「NOTをn回重ねる」という1つの一般式に統合。
+  (v0.49追記) Psi_n(n>=2)は「XORにNOTをn-2回重ねたゲートのb=0断面」
+  に厳密一致する(`extended_xor_family`)——n>=4にも具体的なゲートが
+  あった。
 - 命題21: 命題6・8・9・12・13・15・19・20が使ってきた漸近近似が、
   実は`identities.py`の積分形と厳密に同じ恒等式`-ln(NOT(x;xi))=2ln(cosh(x/xi))`
   の近似に過ぎなかったと判明——OR系命題群を統一する厳密方程式。
+- 命題22(v0.54): 命題16(NOT合成塔)自体も、命題21と同じ精神で
+  非漸近化できることを発見。`S_{k-1}:=xi*arctanh(sqrt(1-S_k))`という
+  厳密な再帰式が、xiが小さくない場合でも(命題16の近似とは違って)
+  機械精度で成り立つ(`not_tower_threshold_exact`)。
 """
 
 import numpy as np
@@ -397,30 +404,73 @@ def or_n_threshold_Cstar(xi):
 
 def or_n_fold_error_bound(margin):
     """
-    命題10の誤差上界 exp(-4*margin)。少なくとも1つの値がC*(xi)+marginを
-    超えていれば、naive foldとOR_n(融合版)の差はこの値程度に収まる
-    (数値検証: xi=1e-2〜1e-8, n=2〜50, margin=0.5〜4で、実測誤差との
-    比が margin>=2 でほぼ1.000に収束することを確認済み)。
+    命題10(v0.56で厳密な証明を与えた)の誤差上界 exp(-4*margin)。
+
+    【定理(証明付き)】a_1,...,a_n を実数、C*(xi):=(1/2)ln(4/xi)、
+    M>=0 とする。ある添字jで |a_j| >= xi*(C*(xi)+M) が成り立ち、かつ
+    xi <= exp(-2M) ならば、
+
+        |naive_fold(a_1,...,a_n;xi) - OR_n(a_1,...,a_n;xi)| <= exp(-4*M)
+
+    が成り立つ。
+
+    【証明】
+    補題1(sechの指数上界、初等的): y>=0 のとき sech(y)<=2*exp(-y)。
+    証明: sech(y)=2/(e^y+e^{-y})<=2/e^y=2exp(-y)(e^{-y}>=0だから)。□
+    したがって sech^2(y)<=4exp(-2y)、すなわち NOT(x;xi)<=4exp(-2x/xi)
+    (x>=0のとき)。
+
+    補題2: |a_j|>=xi*(C*(xi)+M) ならば NOT(a_j;xi)<=xi*exp(-2M)。
+    証明: NOT(x;xi)は偶関数なのでa_j>=0としてよい。補題1より
+    NOT(a_j;xi)<=4exp(-2a_j/xi)<=4exp(-2C*(xi)-2M)
+    =4*exp(-ln(4/xi))*exp(-2M)=xi*exp(-2M)。□
+
+    融合版OR_nの評価: P:=prod_k NOT(a_k;xi) とおくと、他の全ての
+    NOT(a_k;xi)<=1(NOTの値域が(0,1]であることによる)なので、
+    P<=NOT(a_j;xi)<=xi*exp(-2M)(補題2)。ゆえにP/xi<=exp(-2M)。
+    tanh(y)<=y(y>=0、初等的)より reg(P;xi)=tanh(P/xi)^2<=(P/xi)^2
+    <=exp(-4M)。よって OR_n=1-reg(P;xi)>=1-exp(-4M)。
+
+    naive foldの評価: m_k:=NOT(acc_k;xi)とおく。帰納法で、jが
+    どの位置にあっても、j以降の全てのkでm_k<=xi*exp(-2M)が
+    (xi<=exp(-2M)という条件下で)成り立つことを示せる
+    (m_{k-1}<=1という自明な事実だけを使って、j番目の吸収以降は
+    m_kが単調に(xi*exp(-2M)以下に)保たれる、という論法。詳細な
+    帰納法のステップはdev_notes.md v0.56参照)。ゆえに
+    naive_fold=1-m_nは1-xi*exp(-2M)以上になり、xi<=exp(-2M)の
+    もとで xi*exp(-2M)<=exp(-4M) なので、
+    |naive_fold - OR_n| <= max(xi*exp(-2M), exp(-4M)) <= exp(-4M)。□
+
+    数値検証: xi<=exp(-2M)を満たすランダムな3000試行で違反0件
+    (実測誤差/理論上界の比は最大でも~1e-9、理論上界は実測より
+    大幅に緩い)。この技術条件(xi<=exp(-2M))を外すと
+    (5000試行中328件で)実際に違反することも確認済み——この条件は
+    見た目の技術的制約ではなく、本質的に必要な仮定である。
     """
     return np.exp(-4 * margin)
 
 
 def or_n_fusion_is_safe(values, xi, margin=3.0):
     """
-    【命題10の判定版】naive foldとOR_n(融合版)が
-    (or_n_fold_error_bound(margin)程度の精度で)一致するとみなせるか
-    どうかを判定する。AND側のfusion_is_safe(命題3)のOR版に相当。
+    【命題10の判定版、証明付き(or_n_fold_error_boundのdocstring参照)】
+    naive foldとOR_n(融合版)が(or_n_fold_error_bound(margin)以下の
+    誤差で)一致することが**証明されている**条件を判定する。
+    AND側のfusion_is_safe(命題3)のOR版に相当。
 
-    条件: 値のうち少なくとも1つが |a_k| > xi*(C*(xi)+margin) を満たす
-    (AND側が「全部」大きい必要があったのに対し、OR側は「どれか1つ」
-    で足りる——ORの"どれか一つ真なら真"という性質に対応する)。
+    条件: (1) 値のうち少なくとも1つが |a_k| >= xi*(C*(xi)+margin) を
+    満たす(AND側が"全部"大きい必要があったのに対し、OR側は"どれか
+    1つ"で足りる——ORの"どれか一つ真なら真"という性質に対応する)、
+    かつ (2) xi <= exp(-2*margin)(証明に必要な技術条件、数値検証で
+    真に必要だと確認済み)。
 
-    戻り値: True なら naive foldと融合版がor_n_fold_error_bound(margin)
-    程度の精度で一致するとみなせる。
+    戻り値: True なら上の2条件を満たし、naive foldと融合版が
+    or_n_fold_error_bound(margin)以下の誤差で一致することが証明済み。
     """
     values = np.abs(np.asarray(values, dtype=float))
     threshold = xi * (or_n_threshold_Cstar(xi) + margin)
-    return bool(np.any(values > threshold))
+    condition1 = bool(np.any(values > threshold))
+    condition2 = xi <= np.exp(-2 * margin)
+    return condition1 and condition2
 
 
 def or_n_naive_fold(*vals, xi=1.0):
@@ -893,6 +943,55 @@ def not_tower_threshold_numeric(n, xi, bracket=None):
     return (lo + hi) / 2
 
 
+def not_tower_threshold_exact(n, xi):
+    """
+    【命題22(v0.54): NOT合成塔の"厳密版"——命題16を命題21と同じ精神で
+    非漸近化した】
+
+    正直な注記(v0.55): 使っている逆関数z=xi*arctanh(sqrt(VALUE))は
+    tanh(z/xi)^2=VALUEを解いただけの初等的な代数であり、新しい数学
+    ではない。命題16が(本来不要だった)近似を使っていたことに
+    気づき、正確な逆関数に置き換えて精度を上げた、という自己修正
+    に近い。ただしこの修正がNOT写像の力学系(命題17・18)との接続を
+    明らかにした(`not_tower_threshold_limit`参照)ことには価値がある。
+
+    命題16(not_tower_threshold)は、各段で「NOT(z;xi)=小さい目標値、
+    を逆算する」際にepsilon近似(tanh(w)~=w、arctanh(1-eps)~=0.5*ln(2/eps)
+    等)を使う**漸近的な**(xi->0でのみ正確な)閉形式だった。
+
+    ところが命題21(OR系の厳密マスター方程式)と同じ発想——
+    reg(z;xi)=VALUE を厳密に解くと z=xi*arctanh(sqrt(VALUE))になる、
+    という**近似なしの**逆関数——を、命題16の各段にそのまま使うと、
+    近似を一切使わない厳密な再帰式になることに気づいた:
+
+        S_n := 0.5
+        S_{k-1} := xi*arctanh(sqrt(1-S_k))    (k=n,n-1,...,1)
+        x*_n := xi*arctanh(sqrt(S_0))
+
+    (命題16の"epsilon近似"がここではarctanh(sqrt(...))という厳密な
+    逆双曲線関数に置き換わっただけ——xi->0の極限でarctanh(sqrt(1-eps))
+    ~=0.5*ln(4/eps)となり、命題16の近似式に一致することも確認済み)。
+
+    数値検証: xi=0.01〜0.5、n=1〜5の範囲で、
+    not_tower_threshold_numericとの差が機械精度(~1e-14〜1e-16)で
+    一致することを確認した——命題16が「xi->0でのみ有効な近似」
+    だったのに対し、この厳密版は**xiが小さくない場合でも**正確に
+    成り立つ。
+
+    正直な限界: xiが大きく(かつnが大きい)場合、再帰の途中でS_kが
+    [0,1]の範囲を超えてしまい、実数解が存在しない(またはこの単純な
+    分枝では表現できない)ケースがあることを確認した(例:
+    xi=1.2, n=2で発生)。この場合の正しい取り扱い(別の分枝を選ぶ、
+    複素数まで拡張する等)は今回検討していない——kappalogicが主に
+    関心を持つ「xiが小さい」領域では問題なく使える。
+    """
+    A = np.arctanh(1 / np.sqrt(2))
+    S = 0.5
+    for _ in range(n):
+        S = xi * np.arctanh(np.sqrt(1 - S))
+    return xi * np.arctanh(np.sqrt(S))
+
+
 def or_n_trigger_condition_is_not_necessary(xi, n_trials=20000, seed=0, margin=3.0):
     """
     【命題10の必要性についての追加調査(v0.34)】命題10の条件
@@ -1040,6 +1139,12 @@ def exact_not_log_identity(x, xi):
     命題21の基本恒等式: -ln(NOT(x;xi)) = 2*ln(cosh(x/xi))
     (NOT(x;xi)=sech^2(x/xi)の定義から直接出る、厳密な恒等式)。
 
+    正直な注記(v0.55): この恒等式自体はsech=1/coshの言い換えに
+    過ぎず、初等的な数学であり新しい発見ではない。価値があるのは、
+    命題6・8・9・12・13・15・19・20という複数の命題が、この1つの
+    初等的な恒等式の漸近近似だったと整理できたこと(統一の視点)に
+    限られる。
+
     identities.pyのintegral_of_k(x,xi)=xi*ln(cosh(x/xi))と厳密に
     一致する: -ln(NOT(x;xi)) = (2/xi)*integral_of_k(x,xi)。
 
@@ -1085,3 +1190,125 @@ def or_n_exact_threshold_last_value(fixed_values, xi, bracket=(1e-9, 1e4)):
 
     u_last = brentq(f, *bracket)
     return u_last * xi
+
+
+def and_n_naive_fold(*vals, xi=1.0):
+    """AND_nのnaive fold版(逐次的にreg(acc*次の値)を計算する)。"""
+    acc = vals[0]
+    for v in vals[1:]:
+        acc = _reg(acc * v, xi)
+    return acc
+
+
+def and_naive_fold_matches_exactly_at_n2(a, b, xi=1.0):
+    """
+    【v0.48: AND側に命題21のような厳密マスター方程式はなさそう、
+    という調査】
+
+    AND_nのnaive fold(逐次的にreg(acc*次の値;xi)を計算)は、n=2の
+    ときは常に厳密にAND_n(=reg(a*b;xi))と一致する(reg一回のみの
+    計算なので当然)。この関数はn=2の場合の厳密一致を確認するための
+    ヘルパー(戻り値の差は厳密に0になるはず)。
+
+    n>=3では`reg(reg(a*b;xi)*c;xi)`という"二重reg"の構造になり、
+    OR系の命題21で使った「NOT積が指数的に振る舞う→対数を取ると和に
+    なる」という変換が効かない(ANDの引数は積のまま非線形に絡み合い、
+    線形化できない——sympyでn=3の場合を確認したところ、naive foldと
+    AND_3の差は一般に非ゼロだった)。したがって、命題3(v0.16の誤差
+    上界)に代わる、より精密な厳密方程式は今回は見つからなかった。
+    """
+    naive = and_n_naive_fold(a, b, xi=xi)
+    exact = _reg(a * b, xi)
+    return naive - exact
+
+
+def extended_xor_family(a, n, xi):
+    """
+    【命題16の補完(v0.49): NOT合成塔Psi_n(n>=2)に対応する具体的な
+    論理ゲートを発見】
+
+    命題16では「Psi_n(n=1,2,3はNAND・XORのb=0断面・XNORのb=0断面に
+    一致するが、n>=4に対応する具体的な論理ゲートがあるかは考えて
+    いない」としていた。実際に調べたところ、**XORにNOTをn-2回
+    重ねたゲートのb=0断面が、Psi_nに厳密に一致する**ことが分かった:
+
+        Psi_2(a) = XOR(a,0;xi)
+        Psi_3(a) = XNOR(a,0;xi) = NOT(XOR(a,0;xi);xi)
+        Psi_4(a) = NOT(XNOR(a,0;xi);xi) = NOT(NOT(XOR(a,0;xi);xi);xi)
+        Psi_n(a) = NOT^{n-2}(XOR(a,0;xi);xi)   (n>=2)
+
+    つまり、XOR/XNORの先に続く「XORにさらにNOTを重ねた"名前のない"
+    ゲート」の族が、Psi_nの残りのn(n>=4)に対応する具体的な論理演算
+    だったことになる。n=2〜7、複数のxi・aで厳密一致(誤差0)を確認済み。
+
+    この関数はその"拡張XOR族"を計算する(NOTをn-2回、XOR(a,0;xi)に
+    繰り返し適用する)。not_tower_threshold(n,xi)・
+    not_composition_tower(x,n,xi)と組み合わせて、Psi_nの意味づけを
+    完成させるために使う。
+    """
+    from .core import XOR as _XOR, NOT as _NOT
+    val = float(_XOR(a, 0, xi))
+    for _ in range(n - 2):
+        val = float(_NOT(val, xi))
+    return val
+
+
+def not_tower_threshold_limit(xi):
+    """
+    【命題22の拡張(v0.55): NOT合成塔とNOT写像の力学系(命題17・18)の接続】
+
+    命題22の厳密な再帰式 S_{k-1}:=xi*arctanh(sqrt(1-S_k)) は、実は
+    T(w):=NOT(w;xi)=sech(w/xi)^2 という写像(命題17・18で調べた
+    "NOT写像"そのもの)の**逆向きの軌道(backward orbit)**を
+    S_n=0.5から辿っているだけだ、と気づいた。つまり「NOT合成塔の
+    深さnを大きくする」ことは「NOT写像の逆軌道をどんどん遡る」こと
+    と同じ計算になっている。
+
+    力学系の教科書的な事実(新しい数学ではない)として、逆写像の
+    乗数は元の写像の乗数の逆数になる。命題17で見た通りNOT写像の
+    不動点z0(xi)での乗数は常に負なので、逆軌道は(収束する場合)
+    符号が交互に反転しながら不動点に近づく。実際に検証したところ:
+
+    - xi < xi_c(命題17の臨界値、不動点の乗数がちょうど-1になる点)
+      では、S_kはk->inftyでz0(xi)(命題17の不動点)に収束する。
+      収束レートは厳密に 1/|not_map_multiplier(xi)| に一致することを
+      数値検証済み(xi=0.6で60桁近い反復まで比を追跡し、6桁一致)。
+    - xi >= xi_c では、この逆軌道はもはや不動点に収束せず
+      (不動点が逆軌道にとって不安定になるため)、有限のnで
+      S_kが[0,1]の範囲を超えてしまう(命題22の"正直な限界"として
+      記録していた現象の正体が、この臨界点だったと判明)。
+
+    この関数はxi<xi_cのときの極限値 x*_infinity =
+    xi*arctanh(sqrt(z0(xi))) を返す(「無限に深いNOT合成塔」の
+    閾値の極限)。xi>=xi_cでは極限が存在しないためNaNを返す。
+
+    正直な評価: 「逆写像の軌道の収束が元写像の乗数の逆数で決まる」
+    という力学系の原理自体は教科書的な一般論であり新しくない。
+    ここでの新規性は、命題16/22という"計算レシピ"が、実は命題17/18
+    で独立に調べていた力学系の逆軌道そのものだったと気づき、
+    2つの命題群(NOT合成塔とNOT写像の力学系)を接続できたことに
+    限られる——同じ臨界値xi_cが、全く別の角度(パラボリック分岐)
+    から見ても、こちら側(無限段のNOT合成塔の収束限界)からも
+    現れる、という内部的な統一が主な収穫。
+    """
+    from .dynamics import not_map_fixed_point, not_map_critical_xi
+
+    xi_c, _, _ = not_map_critical_xi()
+    if xi >= xi_c:
+        return float("nan")
+    z0 = not_map_fixed_point(xi)
+    return xi * np.arctanh(np.sqrt(z0))
+
+
+def not_tower_backward_orbit(xi, n_steps):
+    """
+    命題22拡張の検証用ヘルパー。S_n=0.5からNOT写像の逆軌道を
+    n_steps回辿り、S_kの列(リスト)を返す。xi<xi_c(命題17の臨界値)
+    ならnot_map_fixed_point(xi)に収束するはず。
+    """
+    S = 0.5
+    seq = [S]
+    for _ in range(n_steps):
+        S = xi * np.arctanh(np.sqrt(1 - S))
+        seq.append(S)
+    return seq

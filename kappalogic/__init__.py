@@ -18,7 +18,12 @@ from .search import (
     soft_gt, soft_eq, soft_or, soft_and, anneal_solve, numeric_grad, l2_penalty,
     is_dont_care_variable, find_dont_care_variables,
 )
-from .field_theory import kink_profile, kink_eom_residual, kink_energy_exact, topological_charge
+from .field_theory import (
+    kink_profile, kink_eom_residual, kink_energy_exact, topological_charge,
+    kink_shape_mode_frequency, kink_continuum_threshold,
+    kink_zero_mode_profile, kink_shape_mode_profile, kink_stability_spectrum_numeric,
+    kink_antikink_collision, kink_antikink_velocity_scan,
+)
 from .stat_mech import box_partition_function, box_partition_function_exact, witten_index_toy
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
@@ -50,6 +55,10 @@ from .theory import (
     xnor_2d_boundary_v_given_large_u, xnor_2d_boundary_numeric,
     exact_not_log_identity, or_n_exact_master_equation_lhs,
     or_n_exact_master_equation_rhs, or_n_exact_threshold_last_value,
+    and_n_naive_fold, and_naive_fold_matches_exactly_at_n2,
+    extended_xor_family,
+    not_tower_threshold_exact,
+    not_tower_threshold_limit, not_tower_backward_orbit,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -72,6 +81,7 @@ from .gauge import (
     xi_dilation_equals_x_dilation, dilation_generator_matches_xi_generator,
     translation_dilation_algebra, hyperbolic_metric_is_scale_invariant,
     killing_vectors_of_xi_halfplane, geodesic_conserved_quantities,
+    annealed_training_trajectory_hyperbolic_speed,
     local_xi_connection_symbolic, local_xi_connection_numeric,
     verify_gauge_structure,
 )
@@ -90,6 +100,9 @@ __all__ = [
     "soft_gt", "soft_eq", "soft_or", "soft_and", "anneal_solve", "numeric_grad", "l2_penalty",
     "is_dont_care_variable", "find_dont_care_variables",
     "kink_profile", "kink_eom_residual", "kink_energy_exact", "topological_charge",
+    "kink_shape_mode_frequency", "kink_continuum_threshold",
+    "kink_zero_mode_profile", "kink_shape_mode_profile", "kink_stability_spectrum_numeric",
+    "kink_antikink_collision", "kink_antikink_velocity_scan",
     "box_partition_function", "box_partition_function_exact", "witten_index_toy",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
@@ -116,6 +129,10 @@ __all__ = [
     "xnor_2d_boundary_v_given_large_u", "xnor_2d_boundary_numeric",
     "exact_not_log_identity", "or_n_exact_master_equation_lhs",
     "or_n_exact_master_equation_rhs", "or_n_exact_threshold_last_value",
+    "and_n_naive_fold", "and_naive_fold_matches_exactly_at_n2",
+    "extended_xor_family",
+    "not_tower_threshold_exact",
+    "not_tower_threshold_limit", "not_tower_backward_orbit",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -132,8 +149,9 @@ __all__ = [
     "xi_dilation_equals_x_dilation", "dilation_generator_matches_xi_generator",
     "translation_dilation_algebra", "hyperbolic_metric_is_scale_invariant",
     "killing_vectors_of_xi_halfplane", "geodesic_conserved_quantities",
+    "annealed_training_trajectory_hyperbolic_speed",
     "local_xi_connection_symbolic", "local_xi_connection_numeric",
     "verify_gauge_structure",
 ]
 
-__version__ = "0.42.0"
+__version__ = "0.56.0"
