@@ -59,6 +59,10 @@ from .theory import (
     extended_xor_family,
     not_tower_threshold_exact,
     not_tower_threshold_limit, not_tower_backward_orbit,
+    or_n_cumulative_prefix_min, or_n_cumulative_trigger_is_safe,
+    or_n_double_not_map, or_n_double_not_unstable_fixed_point,
+    or_n_log_domain_score, or_n_log_domain_to_bounded,
+    signed_log_domain_score,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -70,6 +74,8 @@ from .dynamics import (
     force_fixed_point, multiplier_at, koenigs_coordinate, abel_function, fractional_iterate,
     not_map_fixed_point, not_map_multiplier, not_map_critical_xi,
     squared_map_cubic_coefficient, squared_map_convergence_exponent,
+    squared_map_quartic_coefficient, fatou_coordinate_correction_coefficient,
+    fatou_coordinate_local_step_check,
     asymptotic_fatou_coordinate, asymptotic_fatou_coordinate_local_check,
 )
 from .identities import (
@@ -133,6 +139,10 @@ __all__ = [
     "extended_xor_family",
     "not_tower_threshold_exact",
     "not_tower_threshold_limit", "not_tower_backward_orbit",
+    "or_n_cumulative_prefix_min", "or_n_cumulative_trigger_is_safe",
+    "or_n_double_not_map", "or_n_double_not_unstable_fixed_point",
+    "or_n_log_domain_score", "or_n_log_domain_to_bounded",
+    "signed_log_domain_score",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -142,6 +152,8 @@ __all__ = [
     "force_fixed_point", "multiplier_at", "koenigs_coordinate", "abel_function", "fractional_iterate",
     "not_map_fixed_point", "not_map_multiplier", "not_map_critical_xi",
     "squared_map_cubic_coefficient", "squared_map_convergence_exponent",
+    "squared_map_quartic_coefficient", "fatou_coordinate_correction_coefficient",
+    "fatou_coordinate_local_step_check",
     "asymptotic_fatou_coordinate", "asymptotic_fatou_coordinate_local_check",
     "rapidity", "addition", "n_tuple_angle", "lambert_continued_fraction",
     "mittag_leffler_sum", "weierstrass_product", "gudermannian", "verify_identities",
@@ -154,4 +166,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.56.0"
+__version__ = "0.60.0"

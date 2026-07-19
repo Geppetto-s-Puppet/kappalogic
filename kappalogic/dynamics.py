@@ -257,6 +257,111 @@ def squared_map_cubic_coefficient(xi):
     return val / 6
 
 
+def squared_map_quartic_coefficient(xi):
+    """
+    【命題19(v0.58): 命題18の続き——3次接触放物型不動点の対数/平方根
+    補正項の正体】
+
+    F(z):=NOT(NOT(z;xi);xi)のz0まわりのテイラー展開の**4次係数**
+    c := F''''(z0)/24 を返す(squared_map_cubic_coefficientの
+    3次係数bとペアで使う: F(z0+eps)=z0+eps+b*eps^3+c*eps^4+O(eps^5))。
+
+    このcが、v0.33で「導出できなかった」としていたFatou座標の
+    大域的な補正項の係数を決める(fatou_coordinate_correction_
+    coefficient参照)。
+    """
+    import sympy as sp
+
+    z_sym, xi_sym = sp.symbols('z xi', positive=True)
+    NOT_sym = 1 - sp.tanh(z_sym / xi_sym) ** 2
+    F_sym = NOT_sym.subs(z_sym, NOT_sym)
+    Fp4 = sp.diff(F_sym, z_sym, 4)
+
+    z0 = not_map_fixed_point(xi)
+    val = float(Fp4.subs({z_sym: z0, xi_sym: xi}))
+    return val / 24
+
+
+def fatou_coordinate_correction_coefficient(xi):
+    """
+    命題19: u_n:=1/(F^n(z)-z0)^2 の厳密な漸化式を、3次接触の
+    テイラー展開 F(z0+eps)=z0+eps+b*eps^3+c*eps^4+O(eps^5) から
+    導出すると(b,cはsquared_map_cubic/quartic_coefficient):
+
+        u_{n+1} = u_n - 2b - 2c/sqrt(u_n) + O(1/u_n)
+
+    という関係になる(1/(1+x)^2の展開とu_n*w_n^2=1、u_n*w_n^3=
+    sign(w_n)/sqrt(u_n)という恒等式を使うだけの初等的な計算)。
+
+    u_n ~= -2b*n(標準的な3次接触の主要項)を代入して和を取ると、
+    Sum_{n<=N} 1/sqrt(u_n) ~= 2*sqrt(N)/sqrt(2|b|) (Sum 1/sqrt(n)~=2sqrt(N)
+    という標準的な漸近和を使う)ので、
+
+        u_N + 2*b*N ~= -(4c/sqrt(2|b|)) * sqrt(N) + O(log N)
+
+    という**平方根補正項**(標準の2次接触の放物型不動点で知られる
+    対数補正項とは異なり、3次接触ではsqrt(N)補正になる)が出る。
+    この関数はその係数 -(4c/sqrt(2|b|)) を返す。
+
+    検証: xi=xi_c(命題17の臨界値)で、1ステップだけの厳密な関係
+    u_{n+1}-u_n-(-2b) と 予測値-2c/sqrt(u_n) を、u_n~=7.6e5という
+    大きな値のところで比較したところ、比が0.9926(ほぼ1)で一致した
+    (mpmath 60桁精度、n=200000反復後)。この"1ステップ"レベルでの
+    検証は非常に良く一致するが、これを多数ステップ**累積**した
+    ときのu_N+2bNの挙動を直接fitで確認しようとすると、対数項
+    (O(1/u_n)を足し合わせるとlog Nが出る)との分離が数値的に
+    不安定になり、大域的な閉形式Fatou座標の完全な確立にはまだ
+    至っていない——「1ステップの漸化式の係数は特定できたが、
+    それを多数回反復した後の大域的な挙動を安定して数値確認する」
+    という最後の一歩が残っている。
+
+    正直な評価: v0.33で「未解決」としていた補正項の**正体(平方根
+    補正であること、その係数が4次のテイラー係数cで決まること)**は
+    今回特定できた。ただし多数回反復後の大域的な収束を数値的に
+    安定して再現するには、対数項の係数も合わせて導出し、より高精度
+    な数値実験(桁数・反復回数を増やす)が必要——完全な決着は
+    まだついていない。
+    """
+    b = squared_map_cubic_coefficient(xi)
+    c = squared_map_quartic_coefficient(xi)
+    return -(4 * c) / np.sqrt(2 * abs(b))
+
+
+def fatou_coordinate_local_step_check(xi, n_iterations=200000, eps0=0.01):
+    """
+    fatou_coordinate_correction_coefficientの"1ステップ"レベルでの
+    検証ヘルパー。z0+eps0からF(z)をn_iterations回反復した後、
+    さらに1回反復して u_{n+1}-u_n-(-2b) と -2c/sqrt(u_n) を比較する
+    (mpmath高精度演算を使用)。
+
+    戻り値: (実測のlocal_diff, 予測値, 比率(1に近いほど良い))
+    """
+    import mpmath as mp
+
+    mp.mp.dps = 60
+    xi_mp = mp.mpf(xi)
+    z0 = mp.mpf(not_map_fixed_point(xi))
+    b = squared_map_cubic_coefficient(xi)
+    c = squared_map_quartic_coefficient(xi)
+
+    def F(z):
+        def NOT(x):
+            return 1 - mp.tanh(x / xi_mp) ** 2
+        return NOT(NOT(z))
+
+    z = z0 + mp.mpf(eps0)
+    for _ in range(n_iterations):
+        z = F(z)
+    u = float(1 / (z - z0) ** 2)
+    z_next = F(z)
+    u_next = float(1 / (z_next - z0) ** 2)
+
+    local_diff = u_next - u - (-2 * b)
+    predicted = -2 * c / np.sqrt(u)
+    ratio = local_diff / predicted
+    return local_diff, predicted, ratio
+
+
 def squared_map_convergence_exponent(xi, eps0=0.01, n_values=(1e5, 1e6)):
     """
     【命題18(v0.32)】F(z):=NOT(NOT(z;xi);xi)を臨界xi(命題17のxi_c)で

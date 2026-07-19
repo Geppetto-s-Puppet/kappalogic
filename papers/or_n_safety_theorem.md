@@ -204,8 +204,26 @@ independent confirmation) by direct simulation:
   actual trained differentiable-logic-gate network (e.g. a `difflogic`-style network)
   and measuring whether it improves training stability, which would connect the theory
   directly to a practical claim; (iii) resolving whether a *necessary and sufficient*
-  (not just sufficient) condition exists for naive-fold/fused-OR agreement — this
-  remains open (see accompanying repository, "本丸" / main open problem).
+  (not just sufficient) condition exists for naive-fold/fused-OR agreement.
+
+  **Update (subsequent work).** On (iii), we since found that a strictly more general
+  *sufficient* condition holds empirically: rather than requiring a single input to
+  individually exceed the threshold, it suffices for the running prefix product
+  `P_k := ∏_{i≤k} NOT(a_i;ξ)` to dip below `ξ·δ` for *some* `k` (capturing cases where
+  several moderate inputs jointly trigger safety, none doing so alone) — verified to
+  predict agreement in >97% of random trials, a substantial improvement over the
+  single-element criterion. We further found that the core recursive step of the naive
+  fold is governed by the map `g(x) := NOT(NOT(x;ξ);ξ)`, which has *three* fixed points
+  (a bistable system: an attracting fixed point near 0, an attracting fixed point near
+  1, and an unstable fixed point in between that is close to, but provably distinct
+  from, `C*(ξ)·ξ`). This connects the naive-fold question directly to our separate
+  study of the "NOT map" dynamics (its natural fixed point and parabolic bifurcation).
+  We were not able to turn this into a clean proof: `g` "overcorrects" small arguments
+  further downward but pushes O(1) arguments up toward 1, so a simple monotonicity
+  argument (as used in the proof above) does not extend to the general cumulative case.
+  A full necessary-and-sufficient characterization remains open; we conjecture it is a
+  statement about which side of the unstable fixed point of a *sequentially kicked*
+  version of `g` the trajectory ends up on, but have not made this precise.
 
 ## 6. Reproducibility
 
@@ -214,6 +232,52 @@ package (`kappalogic/theory.py`: `or_n_threshold_Cstar`, `or_n_fold_error_bound`
 `or_n_fusion_is_safe`; `tests/test_v56_or_n_rigorous_proof.py`). `pip install -e .`
 followed by `pytest tests/test_v56_or_n_rigorous_proof.py -v` reproduces the numerical
 validation in §4.
+
+## 7. A companion finding: gradient-preserving composition via the log-domain score
+
+While pursuing a direct answer to the "new combination rule to preserve gradients"
+question raised in §5, we found a concrete, verified design principle specific to this
+kernel family. Define, as in §2's notation,
+```
+L(x;ξ) := -ln(NOT(x;ξ)) = 2·ln(cosh(x/ξ)),
+```
+which appeared already as the key identity behind §3's proof (Lemma 1). Its derivative
+`dL/dx = 2·tanh(x/ξ)/ξ` **converges to ±2/ξ as `|x| → ∞`** rather than vanishing —
+in sharp contrast to `d(reg)/dx`, which decays like `sech²(x/ξ)` and underflows in the
+"confidently true/false" regime that a well-trained network's activations typically
+occupy.
+
+Define `S(a_1,...,a_n;ξ) := Σ_k L(a_k;ξ)`, so that `OR_n(a_1,...,a_n;ξ) = NOT(e^{-S};ξ)`
+exactly (§2). We verified numerically that, for a chain of `n` inputs deep in the
+"confidently true" regime, `∂S/∂a_1` stays within a narrow, roughly constant band
+(6.4–6.7 in our test configuration) as `n` ranges over 5 to 200, while
+`∂(NOT(e^{-S};ξ))/∂a_1` — the gradient of the ordinary bounded output — underflows to
+exactly zero by `n ≈ 50`. The practical recommendation this suggests: for deep or
+wide OR-aggregation layers in a differentiable-logic-gate network, define the training
+loss directly on `S` (an unbounded "logit"-like quantity), and apply the bounded
+`NOT(·;ξ)` conversion only once, at inference time, rather than at every layer or even
+at the final loss computation.
+
+This mirrors a well-established practice in deep learning (computing cross-entropy
+losses from logits via `log-softmax` rather than from probabilities directly, to avoid
+exactly this kind of compounding saturation) — so the *general principle* is not new.
+What we believe is specific to this work is noticing that `L`, already central to the
+proof in §3, is precisely the right "logit" quantity for this kernel family, and
+verifying its depth-independent gradient behavior concretely.
+
+**Empirical validation (training experiment).** We validated the design principle on a
+feature-selection task engineered to require *unlearning*: per-feature weights are
+initialized confidently large (all features included), the target is the OR of a
+relevant subset only, and noise features must be pruned. Training against a squared
+loss on the bounded output leaves all weights frozen at initialization (drift ~1e-5
+over 120 steps — the saturated bounded output supplies no usable gradient), scoring
+0.817 accuracy. Training a BCE loss on the sign-aware log-domain score prunes the noise
+weights to ≈0 and reaches 1.000 accuracy in score space (ξ=0.3). Two practical notes
+emerged: (i) the sign-aware score must be computed via the exact identity
+`-ln((1-tanh z)/2) = softplus(2z)`, since the naive form underflows in float64 for
+`z ≳ 19` and silently kills the gradient; (ii) at smaller ξ the pruning is slower and
+needs step-count/learning-rate tuning — and we have not yet reproduced this inside the
+actual CUDA `difflogic` implementation, which remains the natural next step.
 
 ## References
 

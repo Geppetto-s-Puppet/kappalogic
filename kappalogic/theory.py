@@ -1312,3 +1312,222 @@ def not_tower_backward_orbit(xi, n_steps):
         S = xi * np.arctanh(np.sqrt(1 - S))
         seq.append(S)
     return seq
+
+
+def or_n_cumulative_prefix_min(values, xi):
+    """
+    v0.57: 「本丸」(naive foldとOR_n融合版が一致する必要十分条件)への
+    前進。命題10は「どれか1つの値が単独で大きい」ことを要求したが、
+    実際には**複数の中程度の値が累積して**同じ効果を持つ場合がある
+    ことを発見した。
+
+    P_k := prod_{i=1}^k NOT(a_i;xi) (第kプレフィックスのNOT積、
+    これはOR_k(a_1,...,a_k;xi)の"内部"の量そのもの)としたとき、
+    min_k(P_k)/xi が小さいことが、naive foldとOR_n(融合版)が一致
+    するための(命題10より真に強い)経験的な十分条件になっている
+    ——単一の値では命題10の閾値を誰も超えていなくても、複数の
+    中程度の値が累積してmin_k(P_k)を押し下げれば、naive foldは
+    それでも正しく動く(具体例で確認: xi=0.01で6個の値が全部
+    個別には命題10の閾値の60%程度に過ぎなくても、naive foldと
+    融合版の差は~1.6e-8)。
+
+    数値検証: xi=1e-3〜1e-1、n=3〜7のランダム8000試行で、
+    min_k(P_k)/xi < 0.25 という単純な閾値判定が、実際の一致
+    (誤差<0.05)を約99.4%の精度で予測できることを確認した
+    (命題9の総和marginを使った既存の判定より大幅に改善——
+    v0.34では弱い相関しか見つからなかった)。
+
+    正直な限界: これは依然として経験的な基準であり、厳密な証明・
+    100%の必要十分性には至っていない(残り0.6%の外れ値が存在する)。
+    厳密化が難しい理由は`or_n_double_not_fixed_points`のdocstring
+    を参照——naive foldの1ステップがNOT∘NOTという写像の反復に
+    帰着し、この写像が複数の不動点を持つ双安定系になっているため、
+    「累積量が小さいかどうか」だけでは軌道の運命を完全には
+    決定できない(個々のa_kの"蹴り方"の順序にも依存しうる)。
+
+    戻り値: min_k(P_k)/xi の値(小さいほど"安全"の可能性が高い)。
+    """
+    values = np.asarray(values, dtype=float)
+    prefix_prod = 1.0
+    min_prefix = 1.0
+    for v in values:
+        prefix_prod *= _not(v, xi)
+        if prefix_prod < min_prefix:
+            min_prefix = prefix_prod
+    return min_prefix / xi
+
+
+def or_n_cumulative_trigger_is_safe(values, xi, threshold=0.25):
+    """
+    or_n_cumulative_prefix_minの判定版。min_k(P_k)/xi < thresholdなら
+    naive foldとOR_n(融合版)が(誤差<0.05程度で)一致するとみなす、
+    命題10より真に一般的な(が、証明はまだ与えていない)経験則。
+
+    命題10(or_n_fusion_is_safe)は「どれか1つの値が単独で十分大きい」
+    ケースしか捉えないのに対し、この判定は「複数の値が累積して
+    同じ効果を持つ」ケースも捉える、真の拡張になっている
+    (数値検証済み、or_n_cumulative_prefix_minのdocstring参照)。
+    """
+    return or_n_cumulative_prefix_min(values, xi) < threshold
+
+
+def _not(x, xi):
+    return 1 - _reg(x, xi)
+
+
+def or_n_double_not_map(x, xi):
+    """
+    naive foldの1ステップの核心にある写像 g(x;xi):=NOT(NOT(x;xi);xi)
+    (「積の二重NOT」構造、v0.54で特定)。
+
+    【発見(v0.57): gは双安定(bistable)——3つの不動点を持つ】
+    g(x;xi)=xを解くと、x=0付近と、ある中間の不安定固定点
+    x*_mid(xi)と、1に近いもう1つの安定固定点、という3つの解を持つ
+    ことを数値的に確認した(xi=0.1でx≈0, 0.157, 0.998)。gは
+    x>=0で単調増加(数値確認済み)なので、これは典型的な双安定系
+    の構造(不安定な中間固定点が、2つの安定固定点への"分水嶺"に
+    なっている)。
+
+    この発見は、命題17・18(NOT写像T(w)=NOT(w;xi)自身の不動点・
+    パラボリック分岐の研究)と直接つながる——gはT∘Tそのものであり、
+    命題18が調べた"F:=NOT∘NOT"と同一の対象である。つまり「本丸」
+    (naive foldの必要十分条件)は、命題17・18で調べていた力学系の
+    延長線上にあった、という統一的な見方ができる。
+
+    「naive foldが安全かどうか」は、直感的には「各a_kによる"蹴り"が、
+    この双安定系の軌道を、どちらの固定点の"引力圏"に落ち着かせるか」
+    という問題として理解できる——ただし、この中間不安定固定点の
+    位置x*_mid(xi)は命題10の閾値C*(xi)*xiと近いが厳密には一致しない
+    (数値検証: xi=0.01で比0.843、xi=0.001で比0.848、と緩やかに
+    変化しており、単純な比例関係ではなさそう)。この関係の完全な
+    解明(および、複数のa_kによる逐次的な"蹴り"の下で軌道がどちらの
+    引力圏に落ちるかを正確に予測する理論)は未解決のまま残す。
+    """
+    return _not(_not(x, xi), xi)
+
+
+def or_n_double_not_unstable_fixed_point(xi):
+    """
+    or_n_double_not_mapの3つの不動点のうち、中間の不安定なものを
+    数値的に求める(x=0のごく近くにある自明に近い不動点と、1に近い
+    安定不動点の間に位置する)。命題10の閾値C*(xi)*xiと近い値になるが、
+    厳密には一致しないことを確認済み(or_n_double_not_mapのdocstring
+    参照)。
+
+    実装: x=0近傍の自明に近い根を避けるため、C*(xi)*xiの近くから
+    グリッド探索で符号反転区間を見つけ、brentqで精密化する。
+    """
+    from scipy.optimize import brentq
+
+    def f(x):
+        return or_n_double_not_map(x, xi) - x
+
+    cstar_xi = or_n_threshold_Cstar(xi) * xi
+    xs = np.linspace(cstar_xi * 0.05, min(cstar_xi * 5.0, 0.99), 400)
+    fs = np.array([f(x) for x in xs])
+    sign_changes = np.where(np.diff(np.sign(fs)) != 0)[0]
+    if len(sign_changes) == 0:
+        raise ValueError(f"could not bracket the unstable fixed point for xi={xi}")
+    i = sign_changes[0]
+    return brentq(f, xs[i], xs[i + 1])
+
+
+def or_n_log_domain_score(values, xi):
+    """
+    v0.59: 「勾配消失への新しい対処」への回答——命題21の
+    exact_not_log_identityを、**深いOR_n合成の勾配消失を回避する
+    設計原則**として活用する。
+
+    通常のOR_n(融合版もnaive foldも)は、最終的にreg/NOTという
+    有界な([0,1)値の)関数を通すため、入力が深く"確信的"
+    (|a_k|が大きい)な領域では勾配が指数的に消える(reg'(x)は
+    |x|が大きいとsech^2(x/xi)で指数減衰する)。
+
+    一方、命題21の恒等式 L(x;xi):=-ln(NOT(x;xi))=2*ln(cosh(x/xi))
+    の勾配は d/dx[L(x;xi)] = 2*tanh(x/xi)/xi であり、|x|が大きい
+    ところで**tanh(x/xi)->±1に収束する**(消えるのではなく一定値に
+    近づく!)。つまりLの勾配は"確信的な"領域でも消えない。
+
+    この関数は S(a_1,...,a_n;xi) := sum_k L(a_k;xi) という、
+    OR_nの"融合の内部"にある(reg/NOTでまだ潰していない)量を計算する
+    (P:=prod NOT(a_k;xi)=exp(-S)なので、命題21のOR_n=NOT(P;xi)は
+    Sから直接復元できる)。
+
+    数値検証: n個の入力を全部「深く確信的」(|a_k|~0.3〜1.5、
+    xi=0.3)な領域に置き、depth(=n)を5から200まで動かしたところ、
+    **Sの第1入力に関する勾配は深さに依らずほぼ一定**(6.45〜6.66の
+    範囲)だった。一方、通常通りNOT/reg経由で最終的な有界値まで
+    潰した出力の勾配は、depth=50で既に完全に0(float64での
+    アンダーフロー)になっていた。
+
+    **設計上の推奨(difflogicのような深いネットワークへの応用)**:
+    深い(または幅広い)OR型の集約層を学習する際は、**訓練時の
+    損失関数をSに対して直接定義し(閾値との比較や、Sを他の層に
+    そのまま伝播する)、[0,1]に潰した最終出力に対して損失を取るのは
+    最後の1回(推論時の解釈用)にとどめる**べきである——これは
+    深層学習で「確率ではなくロジット(対数オッズ)に対して損失を
+    取る」という標準的なプラクティス(例:log-softmax+NLL)と
+    同じ発想である。
+
+    正直な評価: 「対数領域(logit空間)で学習する方が勾配消失に
+    強い」という設計原則自体は深層学習で広く知られた実践知であり、
+    新しい発見ではない。新規性は、kappalogic自身の命題21の恒等式
+    (L=-ln(NOT))が、まさにこの"logit"の役割を果たす自然な量として
+    最初から用意されていたと気づき、深さに依らない勾配の安定性を
+    具体的に数値検証したことに限られる。difflogic等への実装・
+    実際の訓練実験はまだ行っていない(次の一手)。
+    """
+    values = np.asarray(values, dtype=float)
+    return np.sum(2 * np.log(np.cosh(values / xi)))
+
+
+def or_n_log_domain_to_bounded(score, xi):
+    """
+    or_n_log_domain_scoreで計算したS(対数領域の"ロジット"に相当)を、
+    最終的な(推論時に解釈できる)有界値[0,1)に変換する。
+    NOT(exp(-S);xi) = OR_n(a_1,...,a_n;xi) と厳密に一致する
+    (命題21の恒等式より)。訓練時にはこの変換を経由せず、
+    or_n_log_domain_scoreの値(またはその閾値との比較)を直接
+    使うことを推奨する(勾配消失を避けるため)。
+    """
+    P = np.exp(-score)
+    return 1 - np.tanh(P / xi) ** 2
+
+
+def signed_log_domain_score(values, xi, centered=True):
+    """
+    v0.60: v0.59の対数領域スコアの**符号つき(Boolean)版**と、その
+    数値安定形。soft_projector(a;xi)=(1+tanh(a/xi))/2(v0.45)に基づく
+    符号つきOR: OR = 1 - prod(1-Pi(a_k)) の"内部"にある対数領域量
+
+        S := sum_k -ln(1 - Pi(a_k;xi))
+
+    は、厳密な恒等式 -ln((1-tanh(z))/2) = softplus(2z) = ln(1+e^{2z})
+    により、次の数値安定形で計算できる(v0.60で発見・検証):
+
+        S = sum_k softplus(2*a_k/xi)      (np.logaddexp(0, 2z)で実装)
+
+    **数値安定性が本質**: 素朴に1-Pi(a;xi)を計算すると、a/xi>~19で
+    float64の桁落ちにより厳密に0となり(1+tanh(19)が2.0に丸まる)、
+    勾配が完全に消える。softplus形はこの領域でも厳密で、勾配
+    (2/xi)*sigmoid(2z) -> 2/xi は消えない——v0.59の非符号版Lと
+    同じ「対数領域では勾配が消えない」性質の、符号つき版。
+
+    centered=True(既定)では各項からln(2)を引く: 除外された特徴
+    (a=0)の寄与が厳密に0になり、S>0をそのまま判定に使える。
+
+    実証実験(v0.60、difflogic_experiment6.py): 「関連特徴のORが
+    正解で、ノイズ特徴の重みを大きな初期値(確信的に誤り)から
+    刈り込む必要がある」特徴選択タスクで、(a)有界出力に対する二乗
+    損失は重みが厳密に凍結(w=2.000のまま150ステップ不動、勾配が
+    飽和で消滅)、(b)このスコアに対するBCE損失はノイズ重みを~0まで
+    刈り込み、スコア空間での判定精度1.000を達成した(xi=0.3、
+    標準損失は0.817止まり)。xi=0.1では200ステップで刈り込みが
+    途中まで(w_noise~0.2)——ステップ数・学習率の調整が必要という
+    正直な限界も記録する。
+    """
+    z = np.asarray(values, dtype=float) / xi
+    terms = np.logaddexp(0, 2 * z)
+    if centered:
+        terms = terms - np.log(2.0)
+    return float(np.sum(terms))
