@@ -8,7 +8,10 @@ from .applications import (
     line_intersection_y, collatz_step, collatz_sequence,
     choc_bar_source,
 )
-from .kernels import KERNELS, apply_kernel
+from .kernels import (
+    KERNELS, apply_kernel, KERNEL_BOUNDARY_CONST,
+    kernel_log_increment, kernel_fused_or_threshold, kernel_fused_or_is_true,
+)
 from .heat import xi_of_time, time_of_xi, heat_step_profile, heat_kernel_gaussian, gaussian_match
 from .quantum_well import (
     box_heat_kernel, box_heat_kernel_eigen,
@@ -103,7 +106,8 @@ __all__ = [
     "kronecker_delta", "levi_civita", "dirac_delta_integral",
     "line_intersection_y", "collatz_step", "collatz_sequence",
     "choc_bar_source",
-    "KERNELS", "apply_kernel",
+    "KERNELS", "apply_kernel", "KERNEL_BOUNDARY_CONST",
+    "kernel_log_increment", "kernel_fused_or_threshold", "kernel_fused_or_is_true",
     "xi_of_time", "time_of_xi", "heat_step_profile", "heat_kernel_gaussian", "gaussian_match",
     "box_heat_kernel", "box_heat_kernel_eigen",
     "infinite_well_propagator", "infinite_well_propagator_eigen",
@@ -174,4 +178,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.63.0"
+__version__ = "0.64.0"
