@@ -80,6 +80,7 @@ from .theory import (
     or_n_kicked_walk_crosses, or_n_crossing_predicts_agreement,
     or_n_kicked_map_unstable_point_asymptotic,
     or_n_optimal_fold_order, or_n_fold_with_optimal_order,
+    or_n_least_firing_fold_order, or_n_firing_is_order_dependent,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -171,6 +172,7 @@ __all__ = [
     "or_n_kicked_walk_crosses", "or_n_crossing_predicts_agreement",
     "or_n_kicked_map_unstable_point_asymptotic",
     "or_n_optimal_fold_order", "or_n_fold_with_optimal_order",
+    "or_n_least_firing_fold_order", "or_n_firing_is_order_dependent",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -194,4 +196,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.71.0"
+__version__ = "0.72.0"
