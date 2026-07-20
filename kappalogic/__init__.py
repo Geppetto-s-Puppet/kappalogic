@@ -12,6 +12,14 @@ from .kernels import (
     KERNELS, apply_kernel, KERNEL_BOUNDARY_CONST,
     kernel_log_increment, kernel_fused_or_threshold, kernel_fused_or_is_true,
 )
+from .physics_bridge import (
+    log_potential, log_charge, chemical_potential, occupation_from_charge,
+    effective_temperature, log_potential_is_dilation_invariant,
+)
+from .partition import (
+    empty_state_probability, or_n_from_empty_state, occupation_step_sech2,
+    free_energy_log_domain, summary as partition_summary, why_no_phase_transition,
+)
 from .heat import xi_of_time, time_of_xi, heat_step_profile, heat_kernel_gaussian, gaussian_match
 from .quantum_well import (
     box_heat_kernel, box_heat_kernel_eigen,
@@ -71,6 +79,7 @@ from .theory import (
     or_n_tree_fold, or_n_tree_fold_via_log_recursion,
     or_n_kicked_walk_crosses, or_n_crossing_predicts_agreement,
     or_n_kicked_map_unstable_point_asymptotic,
+    or_n_optimal_fold_order, or_n_fold_with_optimal_order,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -109,6 +118,10 @@ __all__ = [
     "choc_bar_source",
     "KERNELS", "apply_kernel", "KERNEL_BOUNDARY_CONST",
     "kernel_log_increment", "kernel_fused_or_threshold", "kernel_fused_or_is_true",
+    "log_potential", "log_charge", "chemical_potential", "occupation_from_charge",
+    "effective_temperature", "log_potential_is_dilation_invariant",
+    "empty_state_probability", "or_n_from_empty_state", "occupation_step_sech2",
+    "free_energy_log_domain", "partition_summary", "why_no_phase_transition",
     "xi_of_time", "time_of_xi", "heat_step_profile", "heat_kernel_gaussian", "gaussian_match",
     "box_heat_kernel", "box_heat_kernel_eigen",
     "infinite_well_propagator", "infinite_well_propagator_eigen",
@@ -157,6 +170,7 @@ __all__ = [
     "or_n_tree_fold", "or_n_tree_fold_via_log_recursion",
     "or_n_kicked_walk_crosses", "or_n_crossing_predicts_agreement",
     "or_n_kicked_map_unstable_point_asymptotic",
+    "or_n_optimal_fold_order", "or_n_fold_with_optimal_order",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -180,4 +194,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.65.0"
+__version__ = "0.71.0"
