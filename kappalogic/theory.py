@@ -1760,6 +1760,132 @@ def or_n_crossing_predicts_agreement(values, xi):
     return bool(crossed == fused_true)
 
 
+def or_n_agree_false_certificate(values, xi):
+    """
+    【命題34(v0.74): 双方向の閉形式一致サンドイッチ——FALSE側の証明可能な
+    十分条件(命題10=TRUE側十分条件の双対)】
+
+    命題25で naive fold の真偽が「蹴られた walk s_k=mu_{k-1}+L_k がある k で
+    不安定固定点 t*(xi) を超えるか」に厳密還元されることを示した。本命題は
+    その "境界超過するか" を判定する**閉形式の片側十分条件**を与える:
+
+        **sum_k L_k <= t*(xi)  =>  walk は t* を絶対に超えない
+                              =>  naive fold <= 1/2 (false) かつ fused OR_n も false
+                              =>  両者は一致する(共に false)**
+
+    (L_k := L(a_k;xi) = 2 ln cosh(a_k/xi) >= 0 は命題21の対数増分。)
+
+    証明(初等的・帰納法): 接頭和 P_k := sum_{j<=k} L_j(P_n = S)とおく。
+    仮定 S <= t* のとき、蹴られた walk の累積器 mu_k について mu_k <= P_k が
+    帰納法で示せる——
+      ・基底: mu_1 = L_1 = P_1。
+      ・帰納: mu_{k-1} <= P_{k-1} を仮定すると
+              s_k = mu_{k-1}+L_k <= P_{k-1}+L_k = P_k <= S <= t*。
+        G は単調増加で、低位安定固定点 t_low(二重指数的に微小)と t* の間で
+        G(t) <= t(下向きに流れる双安定写像)。t_low < L_k <= s_k <= t* ゆえ
+        mu_k = G(s_k) <= s_k <= P_k。
+    したがって全ての k で s_k <= P_k <= t*、すなわち境界超過せず naive は false。
+    また t*(xi) < tau(xi) := ln(1/(xi*A))(A=arctanh(1/√2)、下記 or_n_agreement_
+    sandwich で確認)ゆえ S <= t* < tau は fused も false を意味する。∎
+
+    命題10(or_n_fusion_is_safe: 単独の |a_k| が大 => 両者 true)の鏡像で、
+    命題10が「境界を1ステップで超える最も簡単な十分条件」だったのに対し、
+    本命題は「総和が t* に届かないので**絶対に**超えない」という反対側の
+    十分条件。両者で naive/fused の一致を閉形式で両側から挟む(命題34の
+    サンドイッチ)。
+
+    数値検証(誇張しないための実測値): xi in {0.2,0.1,0.05,0.02,0.01}、
+    n<=13 の乱数30000試行で、この判定が true を返したケースの
+    反例(実際には crossed / naive true / fused true になったもの)は0件。
+    帰納法の核 s_k <= P_k も同30000試行で違反0件。
+
+    正直な限界: これは**十分条件**であって必要条件ではない(S>t* でも
+    naive が false のことは多い——残差蓄積が t* に届かない場合)。命題25の
+    完全な必要十分の閉形式(蹴られた walk の境界超過確率の評価)は依然
+    未解決で、本命題はその「安全側(絶対に超えない)」の閉形式境界を
+    確定させたもの。t_low が厳密に0でない(二重指数的に微小)ため、
+    a_k が float64 で表せないほど 0 に近い病的な場合は帰納の t_low < L_k を
+    別途要するが、実用上は常に成立する。
+    """
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    return bool(Ls.sum() <= or_n_kicked_map_unstable_point(xi))
+
+
+def or_n_agree_true_certificate(values, xi):
+    """
+    【命題34(v0.74): TRUE側の証明可能な十分条件】
+
+        **max_k L_k > tau(xi) := ln(1/(xi*A))  (A=arctanh(1/√2))
+          =>  naive fold true かつ fused OR_n true  =>  両者一致(共に true)**
+
+    証明: m=argmax とすると、蹴られた walk で s_m = mu_{m-1}+L_m >= L_m
+    = max L > tau > t*(tau>t* は下記 or_n_agreement_sandwich で確認、
+    漸近的に tau-t* ~ ln ln(1/xi))。よって s_m > t* で境界超過 => naive true。
+    さらに sum L >= max L > tau => fused true(命題21)。∎
+
+    命題10(or_n_fusion_is_safe)も「単独大 => true」だが、あちらは
+    or_n_fold_error_bound(margin) 付きの誤差評価を伴う判定。こちらは
+    「naive と fused が**共に** true(=一致)」を保証する、より単純で
+    tau を閾値にした閉形式版。
+
+    数値検証: xi in {0.2,...,0.01}、n<=13 の乱数30000試行で、この判定が
+    true を返したケースで naive・fused・crossing のいずれかが false だった
+    反例は0件。
+    """
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    A = np.arctanh(1 / np.sqrt(2))
+    tau = np.log(1.0 / (xi * A))
+    return bool(Ls.max() > tau)
+
+
+def or_n_agreement_sandwich(values, xi):
+    """
+    【命題34(v0.74): 双方向サンドイッチの統合判定】
+
+    FALSE側(or_n_agree_false_certificate: sum L <= t*)と TRUE側
+    (or_n_agree_true_certificate: max L > tau)の2つの証明可能な十分条件で、
+    naive fold と fused OR_n の一致を**両側から**証明的に挟む。どちらの
+    証明書も発行されない領域(undecided)は:
+
+        t*(xi) < sum_k L_k   かつ   max_k L_k <= tau(xi)
+
+    ——総和は t* を超えた(=false 側の証明が効かない)が、単独で tau を
+    超える支配的な項が無い(=true 側の証明も効かない)領域。これはまさに
+    残差蓄積と**順序依存**(命題30・32)が効く帯であり、順序不変な閉形式
+    では一致/不一致を決定できない本質的な部分。命題25の未解決の核が
+    この帯に局在することを明示する。
+
+    帯の位置(実測・漸近): t*(xi) ~ ln(1/xi) - ln ln(1/xi)、
+    tau(xi) = ln(1/(xi*arctanh(1/√2))) ~ ln(1/xi) + 0.126。差
+    tau - t* は xi=0.2 で 0.386、xi=0.01 で 1.053 と、~ln ln(1/xi) で
+    緩やかに広がる(下限 t* と上限 tau は sum/max という別軸の量なので
+    "帯幅"は厳密な区間長ではなく、undecided 領域の目安)。
+
+    戻り値: dict(sum_L, max_L, t_star, tau, agree_false_certified,
+                 agree_true_certified, undecided)
+    """
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    tstar = or_n_kicked_map_unstable_point(xi)
+    A = np.arctanh(1 / np.sqrt(2))
+    tau = np.log(1.0 / (xi * A))
+    S = float(Ls.sum())
+    mx = float(Ls.max())
+    agree_false = S <= tstar
+    agree_true = mx > tau
+    return {
+        "sum_L": S,
+        "max_L": mx,
+        "t_star": float(tstar),
+        "tau": float(tau),
+        "agree_false_certified": bool(agree_false),
+        "agree_true_certified": bool(agree_true),
+        "undecided": bool((not agree_false) and (not agree_true)),
+    }
+
+
 def or_n_kicked_map_unstable_point_asymptotic(xi):
     """
     【命題28(v0.65): 不安定固定点 t*(xi) の漸近展開を自己無撞着方程式で

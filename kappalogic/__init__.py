@@ -78,6 +78,8 @@ from .theory import (
     or_n_kicked_map_unstable_point, or_n_max_rule_predicts_agreement,
     or_n_tree_fold, or_n_tree_fold_via_log_recursion,
     or_n_kicked_walk_crosses, or_n_crossing_predicts_agreement,
+    or_n_agree_false_certificate, or_n_agree_true_certificate,
+    or_n_agreement_sandwich,
     or_n_kicked_map_unstable_point_asymptotic,
     or_n_optimal_fold_order, or_n_fold_with_optimal_order,
     or_n_least_firing_fold_order, or_n_firing_is_order_dependent,
@@ -172,6 +174,8 @@ __all__ = [
     "or_n_kicked_map_unstable_point", "or_n_max_rule_predicts_agreement",
     "or_n_tree_fold", "or_n_tree_fold_via_log_recursion",
     "or_n_kicked_walk_crosses", "or_n_crossing_predicts_agreement",
+    "or_n_agree_false_certificate", "or_n_agree_true_certificate",
+    "or_n_agreement_sandwich",
     "or_n_kicked_map_unstable_point_asymptotic",
     "or_n_optimal_fold_order", "or_n_fold_with_optimal_order",
     "or_n_least_firing_fold_order", "or_n_firing_is_order_dependent",
@@ -200,4 +204,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.73.0"
+__version__ = "0.74.0"
