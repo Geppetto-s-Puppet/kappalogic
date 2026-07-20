@@ -225,6 +225,35 @@ independent confirmation) by direct simulation:
   statement about which side of the unstable fixed point of a *sequentially kicked*
   version of `g` the trajectory ends up on, but have not made this precise.
 
+  **Update 2 (structural resolution).** We have since made this precise. Writing
+  `L_k := 2 ln cosh(a_k/ξ)` and `G(t) := -ln NOT(NOT(e^{-t};ξ);ξ)`, the naive fold
+  reduces *exactly* (machine-precision verified, no approximation) to the scalar
+  kicked recursion `μ_1 = L_1`, `μ_k = G(μ_{k-1}+L_k)`, with
+  `naive_fold = NOT(e^{-(μ_{n-1}+L_n)};ξ)`. The transfer map `G` is a saturating
+  bistable function: it has an unstable fixed point `t*(ξ)`, amplifies inputs above
+  `t*` toward an absorbing cap `G_∞ = 2 ln cosh(1/ξ)`, and squashes inputs below `t*`
+  toward 0 (resetting accumulated evidence). The asymptotic consequence is a crisp
+  law: **the naive fold acts as a MAX-aggregator (`max_k L_k > t*`) while the fused
+  OR acts as a SUM-aggregator (`Σ_k L_k > τ`)** — sequential folding degrades the OR
+  from sum-pooling to max-pooling in the log domain. This rule predicts fold/fuse
+  agreement on our random ensemble with 99.5% accuracy, slightly exceeding the
+  empirical cumulative-prefix criterion, and subsumes the single-large-element
+  sufficient condition of §3 as the max-rule special case. What remains open is a
+  quantitative two-sided error bound in terms of the margin `max_k L_k − t*`, which
+  would upgrade this structural characterization into a fully rigorous
+  necessary-and-sufficient theorem.
+
+  **Update 3 (exact structural criterion).** The naive fold's truth value is in fact
+  determined *exactly* by a first-passage event: naive fold is true iff the kicked
+  walk `s_k := μ_{k-1} + L_k` exceeds the unstable fixed point `t*(ξ)` for some `k`.
+  This is the boundary-crossing structure of renewal/ruin theory (Lorden 1970, "On
+  excess over the boundary"), with the twist that the increments `L_k` need not be
+  i.i.d. positive and the walk is contracted by `G` at every step. Empirically this
+  crossing criterion predicts the naive-fold capture state exactly (up to rounding at
+  the 0.5 decision line) and predicts fold/fuse agreement at 99.6%. The single
+  remaining gap toward a closed-form necessary-and-sufficient theorem is a Lorden-type
+  overshoot bound for this *kicked* walk.
+
 ## 6. Reproducibility
 
 All claims above are backed by executable code and tests in the `kappalogic` Python

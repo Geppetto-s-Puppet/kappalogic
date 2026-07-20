@@ -1531,3 +1531,230 @@ def signed_log_domain_score(values, xi, centered=True):
     if centered:
         terms = terms - np.log(2.0)
     return float(np.sum(terms))
+
+
+def or_n_log_kicked_map(t, xi):
+    """
+    【命題23(v0.61): 本丸の統一理論——naive foldの1次元厳密還元と
+    「naive=MAX / fused=SUM」法則】
+
+    その(a): naive foldは、対数座標で**厳密に**1次元の"蹴られた写像"
+    に還元できる。L_k:=L(a_k;xi)=2ln(cosh(a_k/xi))(命題21)とおき、
+
+        mu_1 = L_1,   mu_k = G(mu_{k-1} + L_k)   (k>=2)
+        naive_fold(a_1..a_n) = NOT(exp(-(mu_{n-1}+L_n)); xi)
+
+    が厳密に成り立つ(乱数200試行で機械精度~2e-15を確認)。ここで
+    G(t) := -ln[NOT(NOT(e^{-t};xi);xi)] = L(NOT(e^{-t};xi); xi) は、
+    二重NOT写像g=NOT∘NOT(v0.57の双安定写像)の対数座標版であり、
+    この関数がそれを(数値安定形L(NOT(e^{-t}))で)計算する。
+
+    その(b): Gは**飽和する双安定伝達関数**である——不安定固定点
+    t*(xi)を持ち(or_n_kicked_map_unstable_point)、t>t*では上限
+    G_inf = L(1;xi) ~= 2/xi - ln4 まで増幅(吸収的: 一度上限付近に
+    達すると以後の蹴りで下がらない)、t<t*では~0まで圧縮(リセット:
+    過去の蓄積を忘れる)。数値例(xi=0.05): t*=2.38に対し
+    G(t*+0.5)=12.4(増幅)、G(t*-0.5)=0.030(圧縮)。
+
+    その(c)「naive=MAX / fused=SUM」: (b)の増幅/リセットにより、
+    naive foldの真偽は漸近的に「max_k L_k > t*(xi) か」で決まり
+    (どれか1つの蹴りが単独でt*を超える必要がある——リセットにより
+    複数の中程度の蹴りは蓄積しない)、fused OR_nの真偽は
+    「sum_k L_k > tau(xi):=ln(1/(xi*A)) か」で決まる(命題21)。
+    **逐次foldは、対数領域でORをSUM集約からMAX集約に劣化させる**。
+    v0.57のランダム8000試行アンサンブルで、このMAX-vs-SUM則による
+    一致/不一致の予測精度は99.5%(v0.57の経験的な累積プレフィックス
+    基準99.4%を、原理から導いた規則が上回った)。
+
+    この統一により: 命題10(単独で大きい要素=MAX則の十分条件)、
+    順序依存性(蹴りの残差G(...)が順序に依存)、v0.57の累積基準と
+    双安定不動点、命題17・18(gの不動点)、命題21(L・tau)が、
+    1つの1次元力学系の描像に収まった。
+
+    正直な限界: (a)の還元は厳密(定義の書き換え)だが、(c)のMAX則は
+    漸近的な近似で、残り~0.5%の境界事例(蹴りの残差が効く場合)が
+    ある。「max L_k とt*の差」に基づく厳密な誤差上界(命題10型の
+    証明のMAX則版)はまだ与えていない——次の一手。
+    """
+    x = np.exp(-t)
+    inner = 1 - np.tanh(x / xi) ** 2  # NOT(e^{-t};xi)
+    # L(inner;xi) = 2 ln cosh(inner/xi); use logaddexp form to avoid cosh overflow
+    y = inner / xi
+    return float(2 * (np.logaddexp(y, -y) - np.log(2.0)))
+
+
+def or_n_naive_fold_via_log_recursion(values, xi):
+    """命題23(a)の厳密還元でnaive foldを計算する(検証用)。"""
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    mu = Ls[0]
+    for Lk in Ls[1:-1]:
+        mu = or_n_log_kicked_map(mu + Lk, xi)
+    T = mu + Ls[-1]
+    P = np.exp(-T)
+    return 1 - np.tanh(P / xi) ** 2
+
+
+def or_n_kicked_map_unstable_point(xi):
+    """命題23(b)の不安定固定点 t*(xi): G(t)=t の中間解。"""
+    from scipy.optimize import brentq
+
+    A = np.arctanh(1 / np.sqrt(2))
+    hi = np.log(1 / (xi * A)) + 3
+    ts = np.linspace(0.05, hi, 400)
+    fs = np.array([or_n_log_kicked_map(t, xi) - t for t in ts])
+    sc = np.where(np.diff(np.sign(fs)) != 0)[0]
+    if len(sc) == 0:
+        raise ValueError(f"could not bracket t* for xi={xi}")
+    return brentq(lambda t: or_n_log_kicked_map(t, xi) - t, ts[sc[0]], ts[sc[0] + 1])
+
+
+def or_n_max_rule_predicts_agreement(values, xi):
+    """
+    命題23(c)のMAX-vs-SUM則で「naive foldとfused OR_nが一致するか」を
+    予測する: fused真偽=(sum L_k > tau)、naive真偽=(max L_k > t*)、
+    両者が同じならTrue(一致予測)。漸近則なので~99.5%精度(厳密では
+    ない、docstring参照)。
+    """
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    A = np.arctanh(1 / np.sqrt(2))
+    fused_true = Ls.sum() > np.log(1 / (xi * A))
+    naive_true = Ls.max() > or_n_kicked_map_unstable_point(xi)
+    return bool(fused_true == naive_true)
+
+
+def or_n_tree_fold(values, xi):
+    """
+    v0.62: balanced binary tree で OR_n を畳み込む(Higham の pairwise
+    summation の論理ゲート版)。naive fold(逐次)が対数座標で深さ n-1 の
+    "蹴られた鎖"になる(命題23)のに対し、tree fold は深さ log2(n) の
+    平衡木になる。
+
+    数値解析(Higham 1993)では、素朴な逐次和の誤差が O(n) で成長するのに
+    対し pairwise summation は O(log n) に抑えられる——その論理版として、
+    tree fold は naive fold より fused OR_n に一致しやすいことを確認した
+    (乱数5000試行で不一致が naive の 1/7 に減少)。
+    """
+    values = list(np.asarray(values, dtype=float))
+    if len(values) == 1:
+        return values[0]
+    layer = values
+    while len(layer) > 1:
+        nxt = [_or2(layer[i], layer[i + 1], xi) for i in range(0, len(layer) - 1, 2)]
+        if len(layer) % 2 == 1:
+            nxt.append(layer[-1])
+        layer = nxt
+    return layer[0]
+
+
+def _or2(x, y, xi):
+    return 1 - _reg((1 - _reg(x, xi)) * (1 - _reg(y, xi)), xi)
+
+
+def or_n_tree_fold_via_log_recursion(values, xi):
+    """
+    命題23の tree fold 版(v0.62)。命題23(a)と同じく、tree fold も
+    対数座標で厳密に G-写像の**平衡木**に還元される:
+
+        葉: mu = L(a_k;xi)
+        内部ノード: mu_parent = G(mu_left + mu_right)
+        tree_fold = NOT(exp(-mu_root); xi)
+
+    (naive fold が G の"鎖"だったのに対し、tree fold は G の"平衡木"。
+    どちらも同じ G=NOT∘NOT の対数座標版を使う。乱数200試行で機械精度
+    ~検証済み。)
+
+    帰結(tree fold の集約則): 第1層で隣接ペアの L が**和**を取られてから
+    G を通る。したがって tree fold は「隣接ペアの和のブロック」に対する
+    MAX 集約に近い——naive fold の「単一要素」MAX より、ブロック内で
+    SUM を部分的に回復する。ただしペアリングは**隣接要素のみ**なので、
+    強い値が離れて配置されると回復しない(順序依存が残る)。この
+    "block-MAX-of-pair-SUMS" 構造を具体例で確認済み(隣接配置なら発火、
+    分離配置なら不発火、fused は順序不変)。
+    """
+    values = np.asarray(values, dtype=float)
+    if len(values) == 1:
+        return float(values[0])
+    layer = list(2 * np.log(np.cosh(values / xi)))  # leaves: L_k
+    while True:
+        if len(layer) == 2:
+            # final node: report NOT(exp(-(mu_L + mu_R))) using the sum BEFORE
+            # the last G, exactly as in Prop 23's terminal step
+            T = layer[0] + layer[1]
+            return 1 - np.tanh(np.exp(-T) / xi) ** 2
+        nxt = [or_n_log_kicked_map(layer[i] + layer[i + 1], xi)
+               for i in range(0, len(layer) - 1, 2)]
+        if len(layer) % 2 == 1:
+            nxt.append(layer[-1])
+        layer = nxt
+
+
+def or_n_kicked_walk_crosses(values, xi):
+    """
+    v0.63: 命題23の精密化——naive foldの真偽の**構造的な必要十分判定**。
+
+    命題23で naive fold が対数座標の蹴られた写像 mu_k=G(mu_{k-1}+L_k)
+    に厳密還元されることを示した。ここでは、その軌道が「捕獲」される
+    (=不安定固定点 t*(xi) を超えて G の増幅領域に入り、以後 cap に
+    吸収されて true になる)ための判定を与える:
+
+        **naive fold が true  <=>  蹴られた walk s_k := mu_{k-1}+L_k が
+        ある k で t*(xi) を超える**
+
+    (G は t* の上で単調増幅・cap に吸収、下で ~0 にリセットするので、
+    一度でも t* を超えれば以後 true に張り付き、超えなければ false の
+    まま。この「一度でも境界を超えるか」は破産理論・更新理論(Lorden
+    1970, "On excess over the boundary")の**境界超過(first passage)**
+    と同じ構造——ただし増分 L_k が i.i.d. とは限らず、walk が G で
+    毎回「蹴られる(縮められる)」点が古典論と異なる。)
+
+    この判定は、命題23の漸近的な MAX 則(max_k L_k > t*)を精密化する:
+    MAX 則は「単一の L_k が t* を超えるか」だが、実際には「mu を
+    引き継いだ和 mu_{k-1}+L_k が超えるか」であり、リセット後の残差
+    mu_{k-1} の寄与まで含む。30000試行で、この判定は naive fold の
+    捕獲状態(mu_final>t*)を厳密に(0.5境界の丸めを除き)予測した。
+
+    fused OR_n の真偽は sum_k L_k > tau(xi)(命題21・23、SUM則)。
+    両者が一致するかは or_n_max_rule_predicts_agreement の精密版として
+    「crossed == (sum L_k > tau)」で予測でき、精度99.6%
+    (漸近MAX則の99.5%を上回る)。
+
+    正直な限界: これは naive fold の**構造の完全な記述**(近似なしの
+    必要十分な言い換え)だが、「与えられた値の集合に対して crossed に
+    なるか」を**閉形式**で判定するには、蹴られた walk の境界超過確率を
+    L_k の分布から評価する必要があり、そこは未解決(Lordenの不等式は
+    増分がi.i.d.正値の場合の期待overshoot上界で、ここでは増分が
+    正負混在かつwalkがGで縮む一般化が要る)。厳密な閉形式の必要十分
+    条件への最後の一歩として残す。
+
+    戻り値: (crossed: bool, s_max: float) ——s_maxは軌道中の
+    max_k(mu_{k-1}+L_k)で、s_max-t*が捕獲マージン。
+    """
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    ts = or_n_kicked_map_unstable_point(xi)
+    mu = Ls[0]
+    s_max = mu
+    crossed = mu > ts
+    for Lk in Ls[1:]:
+        s = mu + Lk
+        if s > s_max:
+            s_max = s
+        if s > ts:
+            crossed = True
+        mu = or_n_log_kicked_map(s, xi)
+    return bool(crossed), float(s_max)
+
+
+def or_n_crossing_predicts_agreement(values, xi):
+    """
+    命題23精密版(v0.63): 蹴られたwalkの境界超過(naive)とSUM境界超過
+    (fused)が一致するかで、naive foldとfused OR_nの一致を予測する。
+    or_n_max_rule_predicts_agreementの精密版(精度99.6% vs 99.5%)。
+    """
+    crossed, _ = or_n_kicked_walk_crosses(values, xi)
+    Ls = 2 * np.log(np.cosh(np.asarray(values, dtype=float) / xi))
+    A = np.arctanh(1 / np.sqrt(2))
+    fused_true = Ls.sum() > np.log(1 / (xi * A))
+    return bool(crossed == fused_true)

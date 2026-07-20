@@ -63,6 +63,10 @@ from .theory import (
     or_n_double_not_map, or_n_double_not_unstable_fixed_point,
     or_n_log_domain_score, or_n_log_domain_to_bounded,
     signed_log_domain_score,
+    or_n_log_kicked_map, or_n_naive_fold_via_log_recursion,
+    or_n_kicked_map_unstable_point, or_n_max_rule_predicts_agreement,
+    or_n_tree_fold, or_n_tree_fold_via_log_recursion,
+    or_n_kicked_walk_crosses, or_n_crossing_predicts_agreement,
     nand_threshold_ab, nand_threshold_numeric, gate_dilation_type,
     nor_misclassification_boundary_sum, nor_misclassification_boundary_numeric,
     xor_zero_cross_section_threshold, xor_zero_cross_section_numeric,
@@ -143,6 +147,10 @@ __all__ = [
     "or_n_double_not_map", "or_n_double_not_unstable_fixed_point",
     "or_n_log_domain_score", "or_n_log_domain_to_bounded",
     "signed_log_domain_score",
+    "or_n_log_kicked_map", "or_n_naive_fold_via_log_recursion",
+    "or_n_kicked_map_unstable_point", "or_n_max_rule_predicts_agreement",
+    "or_n_tree_fold", "or_n_tree_fold_via_log_recursion",
+    "or_n_kicked_walk_crosses", "or_n_crossing_predicts_agreement",
     "nand_threshold_ab", "nand_threshold_numeric", "gate_dilation_type",
     "nor_misclassification_boundary_sum", "nor_misclassification_boundary_numeric",
     "xor_zero_cross_section_threshold", "xor_zero_cross_section_numeric",
@@ -166,4 +174,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.60.0"
+__version__ = "0.63.0"
