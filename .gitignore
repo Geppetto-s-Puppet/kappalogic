@@ -8,3 +8,10 @@ dist/
 .venv/
 venv/
 .DS_Store
+
+# CUDA build artifacts (examples/cuda)
+*.exe
+*.obj
+*.lib
+*.exp
+*.pdb
