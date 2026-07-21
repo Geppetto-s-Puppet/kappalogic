@@ -47,7 +47,7 @@ from .superconductivity import (
 from .transport import (
     thermal_transport_window, transport_moment, lorenz_ratio,
     sommerfeld_heat_capacity_coefficient, electronic_heat_capacity,
-    wiedemann_franz_check, LORENZ_NUMBER,
+    wiedemann_franz_check, LORENZ_NUMBER, kubo_dc_conductivity,
 )
 from .magnetism import (
     curie_weiss_magnetization, curie_weiss_susceptibility,
@@ -182,7 +182,7 @@ __all__ = [
     "bcs_gap_zero_temperature", "bcs_universal_ratio", "BCS_UNIVERSAL_RATIO",
     "thermal_transport_window", "transport_moment", "lorenz_ratio",
     "sommerfeld_heat_capacity_coefficient", "electronic_heat_capacity",
-    "wiedemann_franz_check", "LORENZ_NUMBER",
+    "wiedemann_franz_check", "LORENZ_NUMBER", "kubo_dc_conductivity",
     "curie_weiss_magnetization", "curie_weiss_susceptibility",
     "curie_weiss_slope_at_zero", "has_critical_point",
     "pauli_susceptibility", "landau_susceptibility", "total_electron_susceptibility",
@@ -268,4 +268,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.85.0"
+__version__ = "0.86.0"
