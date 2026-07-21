@@ -68,6 +68,7 @@ from .disorder import (
     transfer_matrix_lambda_2d, beta_function_2d, dimensional_beta_survey,
     anderson3d_hamiltonian, ipr_times_n_3d,
     mean_level_spacing, smeared_dos_at_zero, resolution_exponent,
+    resolution_exponent_auto, level_statistics_window_probe,
     required_xi_for_accuracy,
     PICKET_EXPONENT, GOE_EXPONENT, POISSON_EXPONENT,
     ANDERSON_WC, ANDERSON_LAMBDA_C, ANDERSON_NU,
@@ -201,6 +202,7 @@ __all__ = [
     "transfer_matrix_lambda_2d", "beta_function_2d", "dimensional_beta_survey",
     "anderson3d_hamiltonian", "ipr_times_n_3d",
     "mean_level_spacing", "smeared_dos_at_zero", "resolution_exponent",
+    "resolution_exponent_auto", "level_statistics_window_probe",
     "required_xi_for_accuracy",
     "PICKET_EXPONENT", "GOE_EXPONENT", "POISSON_EXPONENT",
     "ANDERSON_WC", "ANDERSON_LAMBDA_C", "ANDERSON_NU",
@@ -276,4 +278,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.91.0"
+__version__ = "0.93.0"

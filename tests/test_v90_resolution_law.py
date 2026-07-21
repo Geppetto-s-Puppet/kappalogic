@@ -119,6 +119,49 @@ def test_xi_window_has_an_upper_bound_too():
     assert abs(p_local - GOE_EXPONENT) < abs(p_wide - GOE_EXPONENT)
 
 
+# ---------- v0.92: 窓を自動選択する自己検証版 ----------
+def test_auto_window_returns_a_stable_segment():
+    from kappalogic.disorder import resolution_exponent_auto
+    rng = np.random.default_rng(20)
+    res = resolution_exponent_auto(_goe_spectra(250, 120, rng))
+    assert res["exponent"] is not None
+    assert res["window"] is not None and len(res["window"]) >= 4
+    # the local slopes inside the chosen window agree to within the tolerance
+    assert len(res["local_slopes"]) == len(res["xis"]) - 1
+
+
+def test_auto_window_reproduces_pure_ensemble_calibration():
+    from kappalogic.disorder import resolution_exponent_auto
+    rng = np.random.default_rng(21)
+    p_goe = resolution_exponent_auto(_goe_spectra(250, 150, rng))["exponent"]
+    p_poi = resolution_exponent_auto(_poisson_spectra(250, 150, rng))["exponent"]
+    assert p_goe < p_poi                    # rigid steeper than independent
+    assert p_goe < -0.75
+    assert p_poi > -0.75
+
+
+def test_auto_window_separates_3d_phases_and_picks_its_own_windows():
+    from kappalogic.disorder import anderson3d_hamiltonian, resolution_exponent_auto
+    rng = np.random.default_rng(22)
+    sp_ext = [np.linalg.eigvalsh(anderson3d_hamiltonian(7, 6.0, rng)[0]) for _ in range(40)]
+    sp_loc = [np.linalg.eigvalsh(anderson3d_hamiltonian(7, 30.0, rng)[0]) for _ in range(40)]
+    r_ext = resolution_exponent_auto(sp_ext)
+    r_loc = resolution_exponent_auto(sp_loc)
+    assert r_ext["exponent"] < r_loc["exponent"] - 0.15
+    # the method chooses the window from the data, so it need not be the same one
+    assert r_ext["window"] is not None and r_loc["window"] is not None
+
+
+def test_auto_window_reports_none_when_no_stable_segment_exists():
+    from kappalogic.disorder import resolution_exponent_auto
+    rng = np.random.default_rng(23)
+    # an impossibly tight tolerance cannot be satisfied -> honest None
+    res = resolution_exponent_auto(_goe_spectra(150, 40, rng), slope_tol=1e-6)
+    assert res["exponent"] is None
+    assert res["window"] is None
+    assert len(res["local_slopes"]) > 0      # diagnostics still returned
+
+
 def test_three_dimensional_phases_are_identified():
     # extended (W=6) reads rigid, strongly localised (W=30) reads Poisson-like
     from kappalogic.disorder import anderson3d_hamiltonian

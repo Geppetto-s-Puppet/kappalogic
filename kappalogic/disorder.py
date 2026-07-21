@@ -411,13 +411,19 @@ def resolution_exponent(spectra, xi_over_delta=(1, 2, 4, 8)):
     == 【重要】ξ には**両側**の境界がある(v0.91 で上限を発見)==
     既定の ξ/Δ=(1,2,4,8) は「局所窓」であり、これには理由がある:
       - **下限 ξ ≳ Δ**: 小さすぎると離散化のアーティファクトを解像する
-        (v0.87 の久保σの η、v0.89 の逆設計の ξ)。
-      - **上限 ξ ≲ 状態密度が変化するスケール**: 大きすぎると窓が**バンド構造を
-        跨いで**しまい、測っているゆらぎが準位統計でなく DOS の形に汚染される。
+        (v0.87 の久保σの η、v0.89 の逆設計の ξ)。**機構は明確**。
+      - **上限 ξ/Δ ≲ 10 程度**: 大きすぎると測った指数が壊れる。
     3D Anderson(L=8、W=6、拡張相=純GOEのはず)で ξ/Δ の範囲を変えると:
         ξ/Δ=4..64 → p=-0.527   2..16 → -0.797   **1..8 → -0.971**
     広い窓では GOE 値(-0.968)から大きくずれ、**局所窓にして初めて一致する**。
-    したがって **Δ ≪ ξ ≪ E_DOS** という窓の中で使うこと。
+
+    **上限側の機構は未解明(v0.92 で正直に確認)**: 当初「窓が状態密度の構造を
+    跨ぐため」と考えたが、DOS が平坦に留まる幅を実測すると ξ/Δ≈54〜146 と
+    破綻点(≈16)よりずっと大きく、この説明では足りない。局所傾きを広範囲で
+    測ると単純な飽和(傾き→0)でもなく、中間に肩を作って大きい ξ で再び急になる
+    非単調な振る舞いを示す(resolution_exponent_auto の docstring 参照)。
+    したがって上限は**経験則**であり、機構の説明ではない。原因を仮定せず
+    データから安定区間を見つける `resolution_exponent_auto` の使用を推奨する。
 
     実測(1次元乱れ鎖 N=400、300配位、既定の局所窓):
         W     <r>       局在長ζ     p
@@ -462,6 +468,140 @@ def resolution_exponent(spectra, xi_over_delta=(1, 2, 4, 8)):
         rels.append(float(np.std(vals) / np.mean(vals)))
     p = float(np.polyfit(np.log(xis), np.log(rels), 1)[0])
     return p, list(zip(xis, rels))
+
+
+def resolution_exponent_auto(spectra, xi_over_delta=None, slope_tol=0.15,
+                             min_points=4):
+    """
+    【v0.92: 窓を自動選択する自己検証版の resolution_exponent】
+
+    命題41 の指数 p は「ξ/Δ をどの範囲で測るか」に依存する(v0.91)。既定の
+    局所窓 (1,2,4,8) はその経験則だったが、系ごとに正しい範囲は変わりうる。
+    本関数は**局所傾きが安定している区間を自分で見つけて**そこでフィットする。
+
+    手順: 広い ξ/Δ 範囲で相対ゆらぎを測り、隣接点間の局所傾きを計算する。
+    局所傾きが `slope_tol` 以内で一致する**最長の連続区間**(最低 min_points 点)を
+    選び、その区間で両対数フィットして p を返す。安定区間が見つからなければ
+    p=None を返す(=この系・この標本数では指数が定義できない、という誠実な答え)。
+
+    実測(3D Anderson L=8, W=6, 120配位)の局所傾き:
+        ξ/Δ:   1     2      4      8     16     32     64    128    256
+        傾き: -0.920 -0.894 -0.872 -0.865 -0.724 -0.458 -0.412 -0.659 -1.105
+    **ξ/Δ=1..8 で -0.92〜-0.87 と安定**し、その先で非単調な構造が出る。本関数は
+    この安定区間を自動で拾う。
+
+    正直な注記: ξ/Δ≳16 で傾きが崩れる**詳細な機構は特定できていない**。
+    当初「窓が状態密度の構造を跨ぐため」と考えたが、DOS が平坦に留まる幅を測ると
+    ξ/Δ≈54〜146 と実測の破綻点(≈16)よりずっと大きく、その説明では足りない。
+    単純な飽和(傾き→0)でもなく、中間に肩を作って大きい ξ で再び急になる非単調な
+    振る舞いを示す。**機構は未解明**なので、本関数は原因を仮定せず「安定区間を
+    データから見つける」という操作的な方法を取る。
+
+    戻り値: dict(exponent, window(=採用した ξ/Δ のタプル), local_slopes,
+                 xis, relative_fluctuations)
+    """
+    if xi_over_delta is None:
+        xi_over_delta = (0.5, 1, 2, 4, 8, 16, 32, 64)
+    spectra = [np.asarray(s, dtype=float) for s in spectra]
+    delta = float(np.mean([mean_level_spacing(s) for s in spectra[:20]]))
+    xis, rels = [], []
+    for factor in xi_over_delta:
+        xi = delta * factor
+        vals = np.array([smeared_dos_at_zero(s, xi) for s in spectra])
+        xis.append(xi)
+        rels.append(float(np.std(vals) / np.mean(vals)))
+    logx, logy = np.log(xis), np.log(rels)
+    slopes = [float((logy[i + 1] - logy[i]) / (logx[i + 1] - logx[i]))
+              for i in range(len(xis) - 1)]
+
+    # 局所傾きが slope_tol 以内で一致する最長の連続区間を探す
+    best = None
+    for i in range(len(slopes)):
+        for j in range(i + min_points - 2, len(slopes)):
+            seg = slopes[i:j + 1]
+            if max(seg) - min(seg) <= slope_tol:
+                n_pts = j - i + 2
+                if best is None or n_pts > best[0]:
+                    best = (n_pts, i, j)
+    if best is None:
+        return {"exponent": None, "window": None, "local_slopes": slopes,
+                "xis": xis, "relative_fluctuations": rels}
+    _, i, j = best
+    p = float(np.polyfit(logx[i:j + 2], logy[i:j + 2], 1)[0])
+    return {"exponent": p, "window": tuple(xi_over_delta[i:j + 2]),
+            "local_slopes": slopes, "xis": xis, "relative_fluctuations": rels}
+
+
+def level_statistics_window_probe(spectra, n_sites, at=16.0,
+                                  factors=(1, 2, 4, 8, 11, 16, 22, 32)):
+    """
+    【命題42(v0.93): ξ窓の上限は Thouless スケール —— 窓の幅が無次元コンダクタンス】
+
+    v0.91-0.92 で「ξ/Δ をある程度以上большойにすると指数が壊れる」ことは分かったが、
+    **なぜ壊れるのかは未解明**のまま残していた(v0.92 で「DOS 構造を跨ぐため」という
+    自分の説明が誤りだと確認済み)。本命題はその機構に答えを与える。
+
+    **主張**: 乱れた系のスペクトル相関が RMT(剛的)の普遍形を保つのは、
+    Thouless エネルギー E_Th までである。ξ がそれを超えると測っているものが
+    剛的相関でなくなり、実効指数が無相関(Poisson)側の値へドリフトする。
+    E_Th を平均準位間隔で割った量 **g = E_Th/Δ は無次元コンダクタンス**なので:
+
+        **有効な ξ 窓は [Δ, g·Δ] ——その幅(Δ単位)が無次元コンダクタンス g**
+
+    本関数は、小 ξ 側の平坦な傾き(plateau)と、固定した ξ/Δ=`at` での局所傾きの
+    **ズレ**を返す。ズレが大きい=その ξ が既に窓の外、小さい=まだ窓の内側。
+
+    == 支持する証拠 ==
+    (1) **金属で L を増やすとズレが減る**(3D Anderson, W=6, ξ/Δ=16)。
+        シード3本の平均±標準偏差で:
+            L=6 (400配位): **+0.488 ± 0.027**
+            L=7 (300配位): +0.463 ± 0.013
+            L=8 (200配位): **+0.376 ± 0.044**
+        3次元金属では g ∝ L なので窓 [1,g] が広がり、固定した 16Δ が窓の内側へ
+        入っていく——予言通りの向き。ただし **L=6→8 の差 0.112 はばらつきの
+        約2.5〜4倍で有意だが圧倒的ではなく、L=6→7 の一歩(0.025)はノイズに
+        埋もれて分解できない**。効果は本物だが控えめ、というのが正確な評価。
+    (2) **絶縁体では L によらずズレ ≈ 0**(W=30): -0.040 / +0.121 / -0.041。
+        局在相は Poisson で**準位が全スケールで無相関**、すなわち相関スケール
+        (=破綻点)を持たない。だから破れる剛性が最初から無い——これも予言通り。
+    (3) 乱れ走査(L=7 固定)では、ズレは W=4:+0.093 → W=8:+0.318 → W=12:+0.172
+        → W=16:+0.209 と**非単調**。これは枠組みと整合する: ズレが大きくなるには
+        「剛的な plateau があること」と「g が小さいこと」の**両方**が要る。
+        W が小さいと g が大きく(窓が広く)ズレず、W が大きいと plateau 自体が
+        既に Poisson 寄り(-0.63/-0.61)で破れる剛性が無い。峠は中間の W。
+
+    == 正直な限界 ==
+    - **E_Th を独立に測って定量比較したわけではない**。示したのは「窓の端が
+      g の期待される振る舞い(金属で L とともに拡大、絶縁体で不在)と整合する」
+      という状況証拠であり、g = 窓幅 の**数値的一致は未検証**。
+    - (3) の非単調性は枠組みで説明できるが、**独立な検証にはなっていない**
+      (ズレは g の単調な代理指標ではない)。
+    - 3D 厳密対角化の制約(L<=8)の中での結論。より大きな系や転送行列による
+      直接の E_Th 測定が次の一手。
+
+    戻り値: dict(plateau_slope, deviation_at, factors, relative_fluctuations,
+                 local_slopes)
+    """
+    from .funcs import delta_approx
+
+    spectra = [np.asarray(s, dtype=float) for s in spectra]
+    delta = float(np.mean([mean_level_spacing(s) for s in spectra[:20]]))
+    fs = np.asarray(factors, dtype=float)
+    rels = []
+    for f in fs:
+        vals = np.array([float(np.sum(delta_approx(s, f * delta)) / n_sites)
+                         for s in spectra])
+        rels.append(float(np.std(vals) / np.mean(vals)))
+    rels = np.asarray(rels)
+    logx, logy = np.log(fs), np.log(rels)
+    slopes = np.diff(logy) / np.diff(logx)
+    plateau = float(np.mean(slopes[:3]))
+    idx = int(np.argmin(np.abs(fs[:-1] - at)))
+    return {"plateau_slope": plateau,
+            "deviation_at": float(slopes[idx] - plateau),
+            "factors": fs.tolist(),
+            "relative_fluctuations": rels.tolist(),
+            "local_slopes": slopes.tolist()}
 
 
 def required_xi_for_accuracy(delta, target_relative_error, exponent):
