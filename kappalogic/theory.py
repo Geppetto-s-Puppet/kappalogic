@@ -1952,14 +1952,27 @@ def or_n_optimal_fold_order(values, xi):
       高く、昇順が最も低い(蹴られたwalkが小さい値から始まって
       暴れやすいという直感と整合)。
 
-    正直な限界: これはn<=14規模の乱数試行・n<=6の全順列探索による
-    経験的確認であり、「なぜ降順が最適なのか」の解析的証明(蹴られた
-    walkの境界超過確率が降順で優越することの厳密な不等式)はまだ
-    与えていない。また[B][C]が示す通り、降順の優位性は「劇的」では
-    なく「ランダム順や昇順と比べて数%〜1%弱、一致率が高い」という
-    程度の、緩やかだが一貫した優位性である——降順は必ず正解を出す
-    という主張ではなく、あくまで「他の順序と比べて最も一致率が高い、
-    実用上の推奨順序」にとどまる。
+    == v0.75 強化: ステップ2最適性の厳密証明 + argmax率の訂正 ==
+    命題35(有限地平則)から、降順最適性の**核が厳密に**取り出せた:
+    - **厳密な部分証明(ステップ2最適性)**: どの順序でも第1フォールドは
+      reset を受けないので s_2 = μ_1+L_(2番目) =(先頭2つの L の和)。
+      降順は先頭2つを**最大の2つ**にするので、**s_2 を全順序の中で最大化
+      する**(並べ替え不等式、初等的)。ゆえに「ある順序がステップ2で
+      発火(crossing)するなら、降順も必ずステップ2で発火する」。crossing の
+      98〜100%はステップ2で起きる(命題35)ので、これが降順最適性の**大半を
+      厳密に説明する**。
+    - **argmax率の訂正**: 上の [A] の「996/998」は fold>0.5 の**0.5境界の
+      浮動小数点丸め**によるノイズだった。クリーンな力学量(蹴られた walk の
+      crossing)で測り直すと、n=3〜6 の**全順列**12000試行で「ある順序が
+      発火するのに降順が発火しない」ケースは**0件**——crossing の意味では
+      降順は(実測)**厳密に firing-argmax** だった(`or_n_descending_is_
+      crossing_argmax` で確認可能)。
+
+    正直な限界: 完全な argmax の**証明**は依然未達。ステップ2最適性は厳密
+    だが、3項以上の蓄積まで込めた「降順が walk のピーク max_k s_k を最大化
+    する」は、隣接互換の議論で G' が 1 をまたぐ(t* 上で増幅 G'>1・reset域で
+    G'<1)ため単調性が崩れ、鮮やかな並べ替え証明にならない。実測は100%
+    (12000試行で反例0)だが「存在しないことの証明」ではない。
 
     戻り値: valuesをL_k降順に並べ替えるための整数インデックス配列
     (np.argsortの戻り値と同じ形式。values[order]で降順化できる)。
@@ -1967,6 +1980,59 @@ def or_n_optimal_fold_order(values, xi):
     values = np.asarray(values, dtype=float)
     Ls = 2 * np.log(np.cosh(values / xi))
     return np.argsort(-Ls)
+
+
+def or_n_descending_is_crossing_argmax(values, xi):
+    """
+    命題30の強化(v0.75): 与えられた値集合について、全順列を尽くして
+    「降順が蹴られた walk の crossing(発火)の argmax か」を厳密に判定する。
+
+    argmax の定義: 「ある順序が crossing するなら降順も crossing する」。
+    降順が発火しないのに発火する順序が存在すれば False(降順は最適でない)。
+
+    戻り値: dict {
+        "descending_crosses": bool,     # 降順で crossing するか
+        "some_order_crosses": bool,     # 何らかの順序で crossing するか
+        "descending_is_argmax": bool,   # 上の含意(some=>desc)が成り立つか
+        "max_step2_is_descending": bool # 降順が s_2 を最大化するか(厳密に必ずTrue)
+    }
+
+    注意: 全順列(n!)を尽くすので n は小さく(<=8 程度)保つこと。crossing は
+    or_n_kicked_walk_crosses と同じ力学判定(0.5境界の丸めの影響を受けない)。
+    """
+    import itertools
+
+    values = np.asarray(values, dtype=float)
+    Ls = 2 * np.log(np.cosh(values / xi))
+    tstar = or_n_kicked_map_unstable_point(xi)
+
+    def crosses(order):
+        mu = order[0]
+        c = mu > tstar
+        for Lk in order[1:]:
+            s = mu + Lk
+            if s > tstar:
+                c = True
+            mu = or_n_log_kicked_map(s, xi)
+        return c
+
+    desc = np.sort(Ls)[::-1]
+    desc_cross = crosses(desc)
+    some_cross = False
+    max_s2 = -np.inf
+    for perm in itertools.permutations(range(len(Ls))):
+        arr = Ls[list(perm)]
+        if crosses(arr):
+            some_cross = True
+        if len(arr) >= 2:
+            max_s2 = max(max_s2, arr[0] + arr[1])
+    desc_s2 = desc[0] + desc[1] if len(desc) >= 2 else desc[0]
+    return {
+        "descending_crosses": bool(desc_cross),
+        "some_order_crosses": bool(some_cross),
+        "descending_is_argmax": bool((not some_cross) or desc_cross),
+        "max_step2_is_descending": bool(abs(desc_s2 - max_s2) < 1e-9),
+    }
 
 
 def or_n_fold_with_optimal_order(values, xi):
