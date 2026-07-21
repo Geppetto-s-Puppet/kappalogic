@@ -69,6 +69,7 @@ from .disorder import (
     anderson3d_hamiltonian, ipr_times_n_3d,
     mean_level_spacing, smeared_dos_at_zero, resolution_exponent,
     required_xi_for_accuracy,
+    PICKET_EXPONENT, GOE_EXPONENT, POISSON_EXPONENT,
     ANDERSON_WC, ANDERSON_LAMBDA_C, ANDERSON_NU,
 )
 from .criticality import (
@@ -201,6 +202,7 @@ __all__ = [
     "anderson3d_hamiltonian", "ipr_times_n_3d",
     "mean_level_spacing", "smeared_dos_at_zero", "resolution_exponent",
     "required_xi_for_accuracy",
+    "PICKET_EXPONENT", "GOE_EXPONENT", "POISSON_EXPONENT",
     "ANDERSON_WC", "ANDERSON_LAMBDA_C", "ANDERSON_NU",
     "classify_bifurcation", "bcs_linear_coefficient", "bcs_beta_amplitude",
     "curie_weiss_beta_amplitude", "bifurcation_survey",
@@ -274,4 +276,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.90.0"
+__version__ = "0.91.0"

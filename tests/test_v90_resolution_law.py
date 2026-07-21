@@ -68,3 +68,65 @@ def test_required_xi_rejects_nonnegative_exponent():
     import pytest
     with pytest.raises(ValueError):
         required_xi_for_accuracy(0.01, 0.1, exponent=0.5)
+
+
+# ---------- v0.91: 純アンサンブルによる較正と、ξ窓の両側境界 ----------
+def _goe_spectra(n, n_real, rng):
+    out = []
+    for _ in range(n_real):
+        A = rng.normal(size=(n, n)) / np.sqrt(n)
+        out.append(np.linalg.eigvalsh((A + A.T) / 2))
+    return out
+
+
+def _poisson_spectra(n, n_real, rng, scale=2.0):
+    return [np.sort(rng.uniform(-scale, scale, n)) for _ in range(n_real)]
+
+
+def _picket_spectra(n, n_real, rng, scale=2.0, jitter=0.02):
+    base = np.linspace(-scale, scale, n)
+    d = base[1] - base[0]
+    return [np.sort(base + jitter * d * rng.normal(size=n)) for _ in range(n_real)]
+
+
+def test_calibration_against_pure_ensembles():
+    # p is a spectral-statistics meter: picket < GOE < Poisson
+    rng = np.random.default_rng(10)
+    p_picket, _ = resolution_exponent(_picket_spectra(300, 150, rng))
+    p_goe, _ = resolution_exponent(_goe_spectra(300, 150, rng))
+    p_poisson, _ = resolution_exponent(_poisson_spectra(300, 150, rng))
+    assert p_picket < p_goe < p_poisson
+    assert p_goe < -0.8                    # rigid: near the theoretical -1
+    assert p_poisson > -0.75               # independent: near the theoretical -0.5
+
+
+def test_calibration_constants_match_theory_ordering():
+    from kappalogic.disorder import PICKET_EXPONENT, GOE_EXPONENT, POISSON_EXPONENT
+    assert PICKET_EXPONENT < GOE_EXPONENT < POISSON_EXPONENT
+    assert abs(GOE_EXPONENT - (-1.0)) < 0.1        # theory -1
+    assert abs(POISSON_EXPONENT - (-0.5)) < 0.15   # theory -0.5
+
+
+def test_xi_window_has_an_upper_bound_too():
+    # a window that is too wide spans DOS structure and biases p away from GOE
+    from kappalogic.disorder import anderson3d_hamiltonian, GOE_EXPONENT
+    rng = np.random.default_rng(11)
+    spectra = [np.linalg.eigvalsh(anderson3d_hamiltonian(6, 6.0, rng)[0])
+               for _ in range(40)]
+    p_local, _ = resolution_exponent(spectra, xi_over_delta=(1, 2, 4, 8))
+    p_wide, _ = resolution_exponent(spectra, xi_over_delta=(4, 8, 16, 32, 64))
+    # the local window sits closer to the pure-GOE calibration
+    assert abs(p_local - GOE_EXPONENT) < abs(p_wide - GOE_EXPONENT)
+
+
+def test_three_dimensional_phases_are_identified():
+    # extended (W=6) reads rigid, strongly localised (W=30) reads Poisson-like
+    from kappalogic.disorder import anderson3d_hamiltonian
+    rng = np.random.default_rng(12)
+    sp_ext = [np.linalg.eigvalsh(anderson3d_hamiltonian(7, 6.0, rng)[0]) for _ in range(40)]
+    sp_loc = [np.linalg.eigvalsh(anderson3d_hamiltonian(7, 30.0, rng)[0]) for _ in range(40)]
+    p_ext, _ = resolution_exponent(sp_ext)
+    p_loc, _ = resolution_exponent(sp_loc)
+    assert p_ext < p_loc - 0.2             # extended is clearly steeper
+    assert p_ext < -0.8                     # rigid side
+    assert p_loc > -0.8                     # Poisson side
