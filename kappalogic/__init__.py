@@ -55,6 +55,11 @@ from .magnetism import (
     pauli_susceptibility, landau_susceptibility, total_electron_susceptibility,
     MEAN_FIELD_BETA, MEAN_FIELD_GAMMA, MEAN_FIELD_AMPLITUDE, LANDAU_PAULI_RATIO,
 )
+from .criticality import (
+    classify_bifurcation, bcs_linear_coefficient, bcs_beta_amplitude,
+    curie_weiss_beta_amplitude, bifurcation_survey,
+    PITCHFORK, PERIOD_DOUBLING, NO_BIFURCATION,
+)
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
     fisher_information_gaussian, de_bruijn_check,
@@ -169,6 +174,9 @@ __all__ = [
     "curie_weiss_slope_at_zero", "has_critical_point",
     "pauli_susceptibility", "landau_susceptibility", "total_electron_susceptibility",
     "MEAN_FIELD_BETA", "MEAN_FIELD_GAMMA", "MEAN_FIELD_AMPLITUDE", "LANDAU_PAULI_RATIO",
+    "classify_bifurcation", "bcs_linear_coefficient", "bcs_beta_amplitude",
+    "curie_weiss_beta_amplitude", "bifurcation_survey",
+    "PITCHFORK", "PERIOD_DOUBLING", "NO_BIFURCATION",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
     "fisher_metric_gaussian", "fisher_metric_matches_gauge_hyperbolic_metric",
@@ -238,4 +246,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.81.0"
+__version__ = "0.82.0"
