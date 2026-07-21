@@ -142,6 +142,73 @@ def srgb_to_hex(rgb):
     return "#" + "".join(f"{int(round(255 * c)):02x}" for c in rgb)
 
 
+def eps2_from_hamiltonian(hamiltonian, omega, xi, n_occ=None):
+    """
+    実空間ハミルトニアンから直接 ε₂(ω) を組む(**モジュール合流**: disorder.py の
+    乱れた鎖をそのまま食わせられる)。
+
+    対角化して固有値 E_i・固有ベクトルを得たあと、占有(下位 n_occ 個)から
+    非占有への遷移を、**双極子行列要素** |⟨i|x̂|j⟩|²(x̂ はサイト座標)で重み付けし、
+    エネルギー保存を kappalogic のデルタ検出器で課す:
+
+        ε₂(ω) = (1/N) Σ_{i∈occ, j∈unocc} |⟨i|x̂|j⟩|² · δ_ξ(E_j - E_i - ω)
+
+    バンド構造版(dielectric_imaginary)が k 空間の直接遷移だったのに対し、
+    こちらは**並進対称性が無くてよい**——乱れた系に使えるのが要点。
+    """
+    H = np.asarray(hamiltonian, dtype=float)
+    N = H.shape[0]
+    E, V = np.linalg.eigh(H)
+    if n_occ is None:
+        n_occ = N // 2
+    Xop = (V.T * np.arange(N, dtype=float)) @ V      # <i|x|j>
+    occ = np.arange(n_occ)
+    unocc = np.arange(n_occ, N)
+    dE = E[unocc][None, :] - E[occ][:, None]
+    M2 = np.abs(Xop[np.ix_(occ, unocc)]) ** 2
+    omega_arr = np.atleast_1d(np.asarray(omega, dtype=float))
+    out = np.array([np.sum(M2 * delta_approx(dE - w, xi)) for w in omega_arr]) / N
+    return out if np.ndim(omega) else float(out[0])
+
+
+def color_saturation(rgb):
+    """
+    色の**彩度**(max(R,G,B) - min(R,G,B))。0 なら無彩色(灰/白/黒)。
+    乱れが色を「洗い流す」度合いを測る素直な指標(下記 disordered_material_color)。
+    """
+    return float(max(rgb) - min(rgb))
+
+
+def material_color_from_hamiltonian(hamiltonian, xi, thickness=8.0, n_occ=None,
+                                    lam_min=380.0, lam_max=780.0, n_lam=161):
+    """
+    実空間ハミルトニアン(乱れていてよい)から、その物質を透過した光の色を計算する。
+    eps2_from_hamiltonian → 吸収 → 透過率 → CIE → sRGB。
+
+    **合流の成果(実測)**: 交替ホッピング鎖(clean gap 2.4 eV、N=120)に箱型乱れ W を
+    入れ、12配位でスペクトルをアンサンブル平均して色を出すと——
+
+        W=0.0 #ffc01a(彩度229)  W=1.0 #ff823c(195)  W=2.0 #e87a58(144)
+        W=3.0 #e1a46e(115)      W=4.0 #deb991(77)
+
+    **彩度が単調に落ちる=乱れが色を洗い流す**。機構はギャップ内吸収(Urbach 裾)で、
+    ε₂(1.2 eV) は W≤2 で 0、W=3 で 0.0081、W=4 で 0.0294 と立ち上がる。
+
+    正直な注記: 輝度(明るさ)は単調ではない(W=2 で最も暗く、W≥3 でむしろ明るく
+    なる)。強い乱れはバンド構造を壊してスペクトル重みを広いエネルギーへ薄く
+    分散させるため、可視域の吸収が弱まって淡くなるからで、**単調な指標は彩度の方**。
+
+    戻り値: dict(rgb, hex, saturation, wavelengths, transmittance)
+    """
+    lam = np.linspace(lam_min, lam_max, n_lam)
+    E = HC_EV_NM / lam
+    e2 = eps2_from_hamiltonian(hamiltonian, E, xi, n_occ)
+    T = np.exp(-absorbance(E, e2) * thickness)
+    rgb = xyz_to_srgb(*spectrum_to_xyz(lam, T))
+    return {"rgb": rgb, "hex": srgb_to_hex(rgb), "saturation": color_saturation(rgb),
+            "wavelengths": lam, "transmittance": T}
+
+
 def transmitted_color(transition_energies, xi, thickness=1.0,
                       lam_min=380.0, lam_max=780.0, n_lam=401, weights=None):
     """

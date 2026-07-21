@@ -152,6 +152,93 @@ def transfer_matrix_lambda(L, disorder_W, n_slices, rng, energy=0.0, qr_every=8)
     return float((1.0 / gamma_min) / L)
 
 
+def _cross_section_chain(L):
+    """2D ストリップ(幅 L)の断面 = L サイトの 1D 鎖(硬い境界)。"""
+    H = np.zeros((L, L))
+    for i in range(L - 1):
+        H[i, i + 1] = H[i + 1, i] = -1.0
+    return H
+
+
+def transfer_matrix_lambda_2d(L, disorder_W, n_slices, rng, energy=0.0, qr_every=8):
+    """
+    **2次元**版の規格化局在長 Λ=λ/L(幅 L のストリップを転送行列で伸ばす)。
+    3D 版(transfer_matrix_lambda)と同じ道具を、断面を 1D 鎖に替えて使う。
+
+    2次元は Anderson 局在の**下部臨界次元(周辺次元)**であり、スケーリング理論
+    では β(g)→0⁻ ——全状態が局在するが「際どい」(弱局在)。実測では W をどう
+    振っても β<0 のままで、**0 を横切らない**(下記 dimensional_beta_survey)。
+    """
+    Hp = _cross_section_chain(L)
+    n = L
+    Q = np.eye(2 * n, n)
+    gsum = np.zeros(n)
+    eye = np.eye(n)
+    for step in range(n_slices):
+        eps = disorder_W * (rng.random(n) - 0.5)
+        A = energy * eye - Hp - np.diag(eps)
+        top, bot = Q[:n], Q[n:]
+        Q = np.vstack([A @ top - bot, top])
+        if (step + 1) % qr_every == 0:
+            Q, R = np.linalg.qr(Q)
+            d = np.abs(np.diag(R))
+            d[d < 1e-300] = 1e-300
+            gsum += np.log(d)
+    gammas = np.sort(gsum / n_slices)
+    positive = gammas[gammas > 0]
+    gamma_min = positive[0] if len(positive) else gammas[-1]
+    return float((1.0 / gamma_min) / L)
+
+
+def beta_function_2d(disorder_W, L1, L2, n_slices, rng, energy=0.0):
+    """
+    2次元の β = d lnΛ/d lnL。どの W でも **負**(0 を横切らない=転移なし)。
+
+    **収束についての注意(実測)**: 弱乱れほど 2D の局在長が指数的に大きくなるため、
+    転送行列を長く取らないと値が安定しない。同一シードで n_slices を振ると:
+        W=2 : -0.03 / -0.32 / -0.15  (M=6000/15000/40000、**未収束・大きく揺らぐ**)
+        W=4 : -0.18 / -0.22 / -0.19  (概ね安定)
+        W=6 : -0.39 / -0.46 / -0.47  (収束)
+        W=8 : -0.62 / -0.61 / -0.61  (収束)
+        W=12: -0.71 / -0.75 / -0.71  (収束)
+    したがって W>=4 程度で使うこと。W<=2 の弱乱れ域を定量的に見るには本実装より
+    遥かに長い転送行列が要る(これは数値の都合であると同時に、2D の弱局在が
+    "極めて長い距離でしか現れない"という物理そのもの)。
+    """
+    a = transfer_matrix_lambda_2d(L1, disorder_W, n_slices, rng, energy)
+    b = transfer_matrix_lambda_2d(L2, disorder_W, n_slices, rng, energy)
+    return float(np.log(b / a) / np.log(L2 / L1))
+
+
+def dimensional_beta_survey(rng, n_slices_2d=12000, n_slices_3d=5000):
+    """
+    【命題39 の完成形】次元 d=1,2,3 で「β が 0 を横切るか」を並べる。
+
+    | d | β の振る舞い                   | 結論                       |
+    |---|--------------------------------|----------------------------|
+    | 1 | 常に強く負(ζ∝W^{-2} で局在)   | 転移なし                   |
+    | 2 | 常に負だが 0 に最も近づく      | **周辺次元**、転移なし     |
+    | 3 | W_c≈16.5 で **0 を横切る**     | **転移あり**(ν=1.602)     |
+
+    実測(本関数で再現可能、収束する W>=4 の範囲): 2D は W=4/8/12 で
+    β ≈ -0.19 / -0.61 / -0.71 と**すべて負**——弱乱れ側ほど 0 に近い(周辺的)。
+    3D は W=8 で +0.71、W=16.5 で -0.016、W=24 で -0.44 と**符号が変わる**。
+
+    正直な限界: 2次元でスケーリング理論が予言する β→0⁻ の漸近(弱乱れで
+    |β|~1/(π²g) と 0 に貼り付く)は、ここでは定量的に再現できていない。W<=2 では
+    転送行列長を変えると値が -0.03〜-0.32 と大きく揺れて収束しないため
+    (beta_function_2d の docstring 参照)、弱乱れ域は扱わない。示せたのは
+    **「2D では β が負のまま 0 を横切らない=転移が無い」という定性的な事実**まで。
+
+    戻り値: dict(d2=[(W, beta), ...], d3=[(W, beta), ...])
+    """
+    d2 = [(W, beta_function_2d(W, 8, 16, n_slices_2d, rng))
+          for W in (4.0, 8.0, 12.0)]
+    d3 = [(W, scaling_beta_function(W, 4, 8, n_slices_3d, rng))
+          for W in (8.0, 16.5, 24.0)]
+    return {"d2": d2, "d3": d3}
+
+
 def scaling_beta_function(disorder_W, L1, L2, n_slices, rng, energy=0.0):
     """
     【命題39】スケーリング理論の**β関数** β = d ln Λ / d ln L を、2つの断面

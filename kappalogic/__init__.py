@@ -59,11 +59,13 @@ from .optics import (
     ssh_transition_energies, dielectric_imaginary, spectral_weight, absorbance,
     cie_color_matching, spectrum_to_xyz, xyz_to_srgb, srgb_to_hex,
     transmitted_color, HC_EV_NM,
+    eps2_from_hamiltonian, material_color_from_hamiltonian, color_saturation,
 )
 from .disorder import (
     disordered_chain, inverse_participation_ratio, localization_length,
     localization_exponent, one_dimension_has_no_mobility_edge,
     transfer_matrix_lambda, scaling_beta_function, anderson3d_critical_exponent,
+    transfer_matrix_lambda_2d, beta_function_2d, dimensional_beta_survey,
     ANDERSON_WC, ANDERSON_LAMBDA_C, ANDERSON_NU,
 )
 from .criticality import (
@@ -188,9 +190,11 @@ __all__ = [
     "ssh_transition_energies", "dielectric_imaginary", "spectral_weight", "absorbance",
     "cie_color_matching", "spectrum_to_xyz", "xyz_to_srgb", "srgb_to_hex",
     "transmitted_color", "HC_EV_NM",
+    "eps2_from_hamiltonian", "material_color_from_hamiltonian", "color_saturation",
     "disordered_chain", "inverse_participation_ratio", "localization_length",
     "localization_exponent", "one_dimension_has_no_mobility_edge",
     "transfer_matrix_lambda", "scaling_beta_function", "anderson3d_critical_exponent",
+    "transfer_matrix_lambda_2d", "beta_function_2d", "dimensional_beta_survey",
     "ANDERSON_WC", "ANDERSON_LAMBDA_C", "ANDERSON_NU",
     "classify_bifurcation", "bcs_linear_coefficient", "bcs_beta_amplitude",
     "curie_weiss_beta_amplitude", "bifurcation_survey",
@@ -264,4 +268,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.84.0"
+__version__ = "0.85.0"
