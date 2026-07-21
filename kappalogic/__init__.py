@@ -83,6 +83,7 @@ from .theory import (
     or_n_log_domain_score, or_n_log_domain_to_bounded,
     signed_log_domain_score,
     or_n_log_kicked_map, or_n_naive_fold_via_log_recursion,
+    and_or_unified_threshold,
     or_n_kicked_map_unstable_point, or_n_max_rule_predicts_agreement,
     or_n_tree_fold, or_n_tree_fold_via_log_recursion,
     or_n_kicked_walk_crosses, or_n_crossing_predicts_agreement,
@@ -184,6 +185,7 @@ __all__ = [
     "or_n_log_domain_score", "or_n_log_domain_to_bounded",
     "signed_log_domain_score",
     "or_n_log_kicked_map", "or_n_naive_fold_via_log_recursion",
+    "and_or_unified_threshold",
     "or_n_kicked_map_unstable_point", "or_n_max_rule_predicts_agreement",
     "or_n_tree_fold", "or_n_tree_fold_via_log_recursion",
     "or_n_kicked_walk_crosses", "or_n_crossing_predicts_agreement",
@@ -218,4 +220,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.78.0"
+__version__ = "0.79.0"

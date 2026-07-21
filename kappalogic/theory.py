@@ -1371,6 +1371,59 @@ def or_n_cumulative_trigger_is_safe(values, xi, threshold=0.25):
     return or_n_cumulative_prefix_min(values, xi) < threshold
 
 
+def _unify_A():
+    return np.arctanh(1 / np.sqrt(2))
+
+
+def and_or_unified_threshold(values, xi):
+    """
+    【命題36(v0.79): AND/OR 融合ゲートの符号双対統一——両者は「加法的
+    log-charge が ±ln(Aξ) を跨ぐか」で発火する、鏡像の閾値則】
+
+    融合版 AND_n=reg(∏a_k)=tanh²(∏a_k/ξ)、OR_n=NOT(∏NOT(a_k)) について、
+    どちらの発火(>1/2)も**加法的な log-charge が閾値 ±ln(Aξ) を越えるか**で
+    厳密に決まる(A=arctanh(1/√2)、両ゲート共通定数):
+
+        AND_n > 1/2  ⟺  Σ_k ln|a_k|          >  ln(A·ξ)      (= -τ)
+        OR_n  > 1/2  ⟺  Σ_k 2 ln cosh(a_k/ξ) >  ln(1/(A·ξ))  (= +τ = -ln(Aξ))
+
+    （τ:=ln(1/(Aξ)) は命題21の OR 閾値。）どちらも初等的に厳密:
+    AND は tanh²(P/ξ)>1/2 ⟺ |P|>Aξ ⟺ Σln|a_k|>ln(Aξ)、OR は命題21。
+
+    == 符号双対性(De Morgan の log-charge 版)==
+    - AND-charge  c_k = ln|a_k|        （生の値の対数振幅。積 ∏a_k 由来）
+    - OR-charge   L_k = 2 ln cosh(a_k/ξ)=-ln NOT(a_k)（検出器補元。∏NOT 由来）
+    - 閾値は**ちょうど符号反転**: AND は ln(Aξ)(負)、OR は -ln(Aξ)(正)。
+    AND は「値の積」を検出(全部が大きくないと積が小さい=AND は全会一致)、
+    OR は「補元の積」を検出(全部が小さくないと補元積が0=OR は1つで足りる)。
+    この「積の対象が値 vs 補元」の違いが、閾値の符号反転として現れる。これが
+    既存の安全定理の双対性——命題3(AND安全=**全部**が大)と命題10(OR安全=
+    **1つ**が大)——の融合レベルでの根拠。
+
+    正直な限界: 統一は**融合版の閾値則**まで。**naive fold の
+    力学**(命題23-35の蹴られたwalk)は OR 固有で、AND には移らない: AND の
+    naive fold acc_k=reg(acc_{k-1}·a_k) は検出器出力[0,1]に生値を掛けて再び
+    reg する入れ子構造(v0.48)で、fused との一致は~50-65%・順序依存もあり、
+    綺麗な1次元kicked-walk還元を持たない。したがって「安全定理を完全に同一
+    形へ」は融合閾値の双対統一までで、逐次fold のダイナミクスは非対称。
+
+    戻り値: dict(and_fires, or_fires, and_charge=Σln|a_k|, or_charge=ΣL_k,
+                 threshold=ln(Aξ)  # AND側。OR側は -threshold)
+    """
+    values = np.asarray(values, dtype=float)
+    A = _unify_A()
+    thr = np.log(A * xi)                                  # AND 閾値 = ln(Aξ)
+    and_charge = float(np.sum(np.log(np.abs(values))))
+    or_charge = float(np.sum(2 * np.log(np.cosh(values / xi))))
+    return {
+        "and_fires": bool(and_charge > thr),
+        "or_fires": bool(or_charge > -thr),
+        "and_charge": and_charge,
+        "or_charge": or_charge,
+        "threshold": float(thr),
+    }
+
+
 def _not(x, xi):
     return 1 - _reg(x, xi)
 
