@@ -36,6 +36,10 @@ from .field_theory import (
     kink_antikink_collision, kink_antikink_velocity_scan,
 )
 from .stat_mech import box_partition_function, box_partition_function_exact, witten_index_toy
+from .quantum_logic import (
+    soft_povm, is_valid_povm, measurement_strength,
+    soft_measurement_kraus, quantum_truth_value,
+)
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
     fisher_information_gaussian, de_bruijn_check,
@@ -138,6 +142,8 @@ __all__ = [
     "kink_zero_mode_profile", "kink_shape_mode_profile", "kink_stability_spectrum_numeric",
     "kink_antikink_collision", "kink_antikink_velocity_scan",
     "box_partition_function", "box_partition_function_exact", "witten_index_toy",
+    "soft_povm", "is_valid_povm", "measurement_strength",
+    "soft_measurement_kraus", "quantum_truth_value",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
     "fisher_metric_gaussian", "fisher_metric_matches_gauge_hyperbolic_metric",
@@ -206,4 +212,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.76.0"
+__version__ = "0.77.0"
