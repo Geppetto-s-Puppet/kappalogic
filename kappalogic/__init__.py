@@ -44,6 +44,11 @@ from .superconductivity import (
     bcs_gap_equation_residual, bcs_critical_temperature, bcs_gap,
     bcs_gap_zero_temperature, bcs_universal_ratio, BCS_UNIVERSAL_RATIO,
 )
+from .transport import (
+    thermal_transport_window, transport_moment, lorenz_ratio,
+    sommerfeld_heat_capacity_coefficient, electronic_heat_capacity,
+    wiedemann_franz_check, LORENZ_NUMBER,
+)
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
     fisher_information_gaussian, de_bruijn_check,
@@ -151,6 +156,9 @@ __all__ = [
     "soft_measurement_kraus", "quantum_truth_value",
     "bcs_gap_equation_residual", "bcs_critical_temperature", "bcs_gap",
     "bcs_gap_zero_temperature", "bcs_universal_ratio", "BCS_UNIVERSAL_RATIO",
+    "thermal_transport_window", "transport_moment", "lorenz_ratio",
+    "sommerfeld_heat_capacity_coefficient", "electronic_heat_capacity",
+    "wiedemann_franz_check", "LORENZ_NUMBER",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
     "fisher_metric_gaussian", "fisher_metric_matches_gauge_hyperbolic_metric",
@@ -220,4 +228,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.79.0"
+__version__ = "0.80.0"

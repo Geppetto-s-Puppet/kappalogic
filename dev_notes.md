@@ -1353,3 +1353,25 @@ acc_k=reg(acc_{k-1}·a_k)(検出器出力[0,1]に生値を掛けて再びreg)の
 還元を持たない。数値でも確認(xi=0.05でnaive==fused 49%、順序依存497/10000)。
 「安全定理を完全に同一形へ」は融合閾値の双対統一までが誠実な到達点。
 and_or_unified_threshold として実装。453テスト到達(448+5)。
+
+## v0.80: 電子輸送——「輸送窓 = kappalogic の NOT 検出器」(物性計算 続き)
+
+物性計算の第2弾(超伝導の次)。エレガントな核心: フェルミ占有 f のエネルギー
+微分(=電流・熱を運ぶ輸送窓)が kappalogic の NOT そのもの:
+    w(E) = -∂f/∂E = sech²((E-μ)/2kT)/(4kT) = NOT(E-μ; 2kT)/(4kT)  (誤差0で確認)
+「フェルミ準位まわり幅 kT の輸送窓」= OFF検出器 NOT。窓は∫w dE=1 に規格化。
+
+窓のモーメント L_n=∫(E-μ)^n w dE から輸送の普遍則: L_0=1, L_1=0, L_2=(π²/3)(kT)²
+(数値・解析一致)。帰結:
+- **Wiedemann-Franz 則 κ/(σT)=π²/3(k_B/e)²=ローレンツ数 2.4430e-8 WΩ/K²**を
+  再現(緩和時間・DOS・速度に依らない普遍定数、実験値2.44e-8と一致)。BCSの
+  普遍比1.7639と並ぶ、物性の"ハードな検証アンカー"。
+- 電子比熱ゾンマーフェルト γ=(π²/3)k_B²g(μ)(C_v=γT線形)。
+
+transport.py として実装(thermal_transport_window/transport_moment/lorenz_ratio/
+sommerfeld_heat_capacity_coefficient/electronic_heat_capacity/wiedemann_franz_check)。
+superconductivity.py と同じく教科書物性の再現(新物理ではない)だが、「輸送窓=
+kappalogic の NOT」という接続で、物性を kappalogic の検出器の言葉で計算できる
+ことを示した。TODO物性ロードマップの電導/熱容量/Wiedemann-Franzを消化。
+残る物性: 磁化率(パウリ/ランダウ)、光学応答/色(誘電関数)、粘性、化学反応。
+460テスト到達(453+7)。
