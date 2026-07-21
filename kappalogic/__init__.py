@@ -67,6 +67,8 @@ from .disorder import (
     transfer_matrix_lambda, scaling_beta_function, anderson3d_critical_exponent,
     transfer_matrix_lambda_2d, beta_function_2d, dimensional_beta_survey,
     anderson3d_hamiltonian, ipr_times_n_3d,
+    mean_level_spacing, smeared_dos_at_zero, resolution_exponent,
+    required_xi_for_accuracy,
     ANDERSON_WC, ANDERSON_LAMBDA_C, ANDERSON_NU,
 )
 from .criticality import (
@@ -197,6 +199,8 @@ __all__ = [
     "transfer_matrix_lambda", "scaling_beta_function", "anderson3d_critical_exponent",
     "transfer_matrix_lambda_2d", "beta_function_2d", "dimensional_beta_survey",
     "anderson3d_hamiltonian", "ipr_times_n_3d",
+    "mean_level_spacing", "smeared_dos_at_zero", "resolution_exponent",
+    "required_xi_for_accuracy",
     "ANDERSON_WC", "ANDERSON_LAMBDA_C", "ANDERSON_NU",
     "classify_bifurcation", "bcs_linear_coefficient", "bcs_beta_amplitude",
     "curie_weiss_beta_amplitude", "bifurcation_survey",
@@ -270,4 +274,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.89.0"
+__version__ = "0.90.0"
