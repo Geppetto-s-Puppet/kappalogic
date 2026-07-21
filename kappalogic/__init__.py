@@ -49,6 +49,12 @@ from .transport import (
     sommerfeld_heat_capacity_coefficient, electronic_heat_capacity,
     wiedemann_franz_check, LORENZ_NUMBER,
 )
+from .magnetism import (
+    curie_weiss_magnetization, curie_weiss_susceptibility,
+    curie_weiss_slope_at_zero, has_critical_point,
+    pauli_susceptibility, landau_susceptibility, total_electron_susceptibility,
+    MEAN_FIELD_BETA, MEAN_FIELD_GAMMA, MEAN_FIELD_AMPLITUDE, LANDAU_PAULI_RATIO,
+)
 from .info_theory import (
     gaussian_variance, differential_entropy_gaussian,
     fisher_information_gaussian, de_bruijn_check,
@@ -159,6 +165,10 @@ __all__ = [
     "thermal_transport_window", "transport_moment", "lorenz_ratio",
     "sommerfeld_heat_capacity_coefficient", "electronic_heat_capacity",
     "wiedemann_franz_check", "LORENZ_NUMBER",
+    "curie_weiss_magnetization", "curie_weiss_susceptibility",
+    "curie_weiss_slope_at_zero", "has_critical_point",
+    "pauli_susceptibility", "landau_susceptibility", "total_electron_susceptibility",
+    "MEAN_FIELD_BETA", "MEAN_FIELD_GAMMA", "MEAN_FIELD_AMPLITUDE", "LANDAU_PAULI_RATIO",
     "gaussian_variance", "differential_entropy_gaussian",
     "fisher_information_gaussian", "de_bruijn_check",
     "fisher_metric_gaussian", "fisher_metric_matches_gauge_hyperbolic_metric",
@@ -228,4 +238,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.80.0"
+__version__ = "0.81.0"
