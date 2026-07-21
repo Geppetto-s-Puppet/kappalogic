@@ -106,6 +106,34 @@ def test_order_interpolates_max_to_sum_in_accumulation_regime():
     assert desc_rate - asc_rate > 0.4
 
 
+def test_kstep_ladder_is_sufficient_and_tightens_with_k():
+    # k-step truncated rule: rigorous sufficiency for every k (0 false positives),
+    # and necessity improves monotonically with k (k=4 -> exact in this sample)
+    rng = np.random.default_rng(9)
+    xis = [0.2, 0.1, 0.05, 0.02, 0.01]
+    fp = {2: 0, 3: 0, 4: 0}
+    fn = {2: 0, 3: 0, 4: 0}
+    total = 0
+    for xi in xis:
+        for _ in range(3000):
+            n = rng.integers(2, 13)
+            vals = rng.normal(0, rng.uniform(0.15, 1.4), n)
+            truth = _desc_crosses(vals, xi)
+            total += 1
+            for k in (2, 3, 4):
+                pred = or_n_optimal_fold_fires(vals, xi, steps=k)
+                if pred and not truth:
+                    fp[k] += 1
+                if truth and not pred:
+                    fn[k] += 1
+    # rigorous sufficiency at every k
+    assert fp[2] == 0 and fp[3] == 0 and fp[4] == 0
+    # necessity tightens with k
+    assert fn[2] >= fn[3] >= fn[4]
+    # k=4 is exact on this sample
+    assert fn[4] == 0
+
+
 def test_single_large_and_two_mids():
     xi = 0.01
     tstar = or_n_kicked_map_unstable_point(xi)
