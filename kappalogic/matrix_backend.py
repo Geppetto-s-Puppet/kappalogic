@@ -362,6 +362,76 @@ def sp2_density_matrix(H, n_occ, max_iter=100, tol=1e-13, return_iters=False):
     return best_X
 
 
+def density_matrix_decay_length(P, skip=2, max_distance=None):
+    """
+    密度行列の**近視性**の長さ: |P_ij| の距離 d=|i-j| に対する指数減衰長 λ
+    (ln<|P_ij|>_d ≈ -d/λ を最小二乗で当てる)。1次元的な並びを仮定する。
+
+    λ が小さいほど P が疎になり、遠方を切り捨てられる=線形スケーリングが効く
+    (density_matrix_truncation_error 参照)。指数減衰しない(金属など)場合は
+    inf または None を返す。
+    """
+    P = np.asarray(P, dtype=float)
+    N = P.shape[0]
+    max_distance = max_distance or N // 3
+    ds, logs = [], []
+    for d in range(skip, max_distance):
+        m = np.mean(np.abs(np.diagonal(P, offset=d)))
+        if m > 1e-14:
+            ds.append(d)
+            logs.append(np.log(m))
+    if len(ds) < 4:
+        return None
+    slope = np.polyfit(ds, logs, 1)[0]
+    return float(-1.0 / slope) if slope < 0 else float("inf")
+
+
+def density_matrix_truncation_error(P, radius):
+    """
+    |i-j| > radius の成分を捨てたときの相対 Frobenius 誤差
+    ||P_truncated - P||_F / ||P||_F。**線形スケーリング DFT の実用指標**——
+    小さい radius で誤差が十分小さいなら、P を帯行列として O(N) で扱える。
+    """
+    P = np.asarray(P, dtype=float)
+    N = P.shape[0]
+    idx = np.arange(N)
+    keep = np.abs(idx[:, None] - idx[None, :]) <= radius
+    return float(np.linalg.norm(P * (~keep)) / np.linalg.norm(P))
+
+
+# --- v0.88 の知見(乱れ × SP2)を関数の外にまとめて記録 ---
+#
+# 【当初の仮説は外れた】「乱れによる局在も、ギャップとは別ルートで密度行列の
+# 近視性を作るのではないか」と考えて調べたが、**そうではなかった**。
+# 乱れた SSH 鎖(N=200、清浄ギャップ 1.0、4配位平均)で:
+#
+#   W      SP2収束|P²-P|   P減衰長λ   局在長ζ(IPR)   HOMO-LUMO間隔
+#   0.0    2.6e-15          4.11       136.4          1.0024
+#   1.0    3.0e-15          4.13        27.2          0.7754
+#   2.0    3.5e-15          4.33        11.4          0.4110
+#   4.0    5.2e-15          4.90         7.3          0.0218
+#
+# **ζ が 136→7 と 19 倍縮み、HOMO-LUMO 間隔が 46 倍崩壊しても、λ はほぼ不変**
+# (4.11→4.90)。つまり近視性の長さ λ は、単一固有状態の局在長 ζ でも、
+# フェルミ準位の準位間隔でも決まっていない。清浄鎖でギャップだけを振ると λ は
+# 単調に応答する(gap 1.0→2.5 で λ 4.11→0.86)ので、λ を決めているのは
+# **より粗視化されたギャップ構造(移動度ギャップ)** の方であり、これは乱れで
+# ゆっくりとしか劣化しない。
+#
+# 【実用的な帰結(こちらは朗報)】密度行列の打ち切り誤差が乱れに極めて頑健:
+#
+#   W      R=5       R=10      R=20      R=40
+#   0.0    5.62e-02  1.82e-02  1.40e-03  1.14e-05
+#   1.0    5.63e-02  1.76e-02  1.35e-03  1.08e-05
+#   2.0    6.04e-02  1.88e-02  1.71e-03  1.99e-05
+#   4.0    8.05e-02  3.33e-02  8.51e-03  1.03e-03
+#
+# W=0/1/2 で誤差がほぼ同一——**ζ が 12 倍縮んでも必要な打ち切り半径は変わらない**。
+# すなわち **SP2 による O(N) DFT は、ギャップのある系では乱れに頑健**。
+# 強乱れ(W=4、ギャップがほぼ埋まる)でようやく劣化するが、それでも R=40 で
+# 相対誤差 1e-3 に収まる。SP2 自体の収束(冪等性 |P²-P|)は全乱れで ~1e-15。
+
+
 def matrix_susceptibility(H, A, xi, gate_fn=None, h=1e-6, n_doublings=25):
     """
     v0.46: TODO.md「行列版の摂動論(自動微分に相当)」への対応。
