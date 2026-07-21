@@ -270,4 +270,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.88.0"
+__version__ = "0.89.0"
