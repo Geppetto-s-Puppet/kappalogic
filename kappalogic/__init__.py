@@ -55,6 +55,15 @@ from .magnetism import (
     pauli_susceptibility, landau_susceptibility, total_electron_susceptibility,
     MEAN_FIELD_BETA, MEAN_FIELD_GAMMA, MEAN_FIELD_AMPLITUDE, LANDAU_PAULI_RATIO,
 )
+from .optics import (
+    ssh_transition_energies, dielectric_imaginary, spectral_weight, absorbance,
+    cie_color_matching, spectrum_to_xyz, xyz_to_srgb, srgb_to_hex,
+    transmitted_color, HC_EV_NM,
+)
+from .disorder import (
+    disordered_chain, inverse_participation_ratio, localization_length,
+    localization_exponent, one_dimension_has_no_mobility_edge,
+)
 from .criticality import (
     classify_bifurcation, bcs_linear_coefficient, bcs_beta_amplitude,
     curie_weiss_beta_amplitude, bifurcation_survey,
@@ -174,6 +183,11 @@ __all__ = [
     "curie_weiss_slope_at_zero", "has_critical_point",
     "pauli_susceptibility", "landau_susceptibility", "total_electron_susceptibility",
     "MEAN_FIELD_BETA", "MEAN_FIELD_GAMMA", "MEAN_FIELD_AMPLITUDE", "LANDAU_PAULI_RATIO",
+    "ssh_transition_energies", "dielectric_imaginary", "spectral_weight", "absorbance",
+    "cie_color_matching", "spectrum_to_xyz", "xyz_to_srgb", "srgb_to_hex",
+    "transmitted_color", "HC_EV_NM",
+    "disordered_chain", "inverse_participation_ratio", "localization_length",
+    "localization_exponent", "one_dimension_has_no_mobility_edge",
     "classify_bifurcation", "bcs_linear_coefficient", "bcs_beta_amplitude",
     "curie_weiss_beta_amplitude", "bifurcation_survey",
     "PITCHFORK", "PERIOD_DOUBLING", "NO_BIFURCATION",
@@ -246,4 +260,4 @@ __all__ = [
     "verify_gauge_structure",
 ]
 
-__version__ = "0.82.0"
+__version__ = "0.83.0"
