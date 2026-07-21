@@ -300,6 +300,69 @@ def anderson3d_critical_exponent(sizes, disorder_values, n_slices_map, rng,
     return float(1.0 / inv_nu), slopes, lambdas
 
 
+def anderson3d_hamiltonian(L, disorder_W, rng, t=1.0):
+    """
+    3次元立方格子(周期境界)の Anderson モデル。箱型乱れ。
+    戻り値: (H, x_coords) —— x_coords は各サイトの x 座標(輸送計算で位置演算子
+    として使う。格子の平坦インデックスをそのまま座標にするのは誤りなので、
+    transport.kubo_dc_conductivity には必ずこれを渡すこと)。
+    """
+    N = L ** 3
+    H = np.zeros((N, N))
+
+    def idx(x, y, z):
+        return (x % L) * L * L + (y % L) * L + (z % L)
+
+    for x in range(L):
+        for y in range(L):
+            for z in range(L):
+                i = idx(x, y, z)
+                for dx, dy, dz in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
+                    j = idx(x + dx, y + dy, z + dz)
+                    H[i, j] -= t
+                    H[j, i] -= t
+    H[np.arange(N), np.arange(N)] = disorder_W * (rng.random(N) - 0.5)
+    x_coords = np.array([i // (L * L) for i in range(N)], dtype=float)
+    return H, x_coords
+
+
+def ipr_times_n_3d(L, disorder_W, rng, n_samples=3, n_states=20, mu=0.0):
+    """
+    【v0.87: 3D Anderson 転移の"効く"プローブ】バンド中心近傍の固有状態について
+    **IPR × N**(N=L³)を返す。
+
+    - **拡張状態**: IPR ~ 1/N なので IPR×N ≈ 一定(ランダム行列的な揺らぎで ~3)。
+      → **L を変えても平坦**。
+    - **局在状態**: IPR ~ 1/ζ³(サイズに依らない)なので IPR×N ∝ N。
+      → **L とともに増大**。
+
+    したがって「L を変えたとき平坦か増大か」で拡張/局在を判定できる。
+
+    実測(L=8 vs L=10、L³=512 vs 1000、バンド中心20状態):
+        W    :  6.0    12.0   16.5   22.0    30.0
+        L=8  :  3.80   11.69  34.42  65.29  130.57
+        L=10 :  3.88   12.53  35.43  99.72  359.52
+        比   :  1.02   1.07   1.03   1.53    2.75
+    W=6 では比 1.02 と**平坦=拡張**、W>=22 で 1.5〜2.8 と**明確に増大=局在**。
+    有限サイズゆえ見かけの境界は文献の W_c=16.5 より高めに出る(小さい系では
+    局在長が系サイズを超えると拡張に見えるため)——転移の**存在**は捉えられるが、
+    W_c の精密決定には転送行列(命題39)の方が適する。
+
+    正直な注記: 同じ系で久保伝導度 σ を有限サイズ signature に使おうとしたが
+    **失敗した**(transport.kubo_dc_conductivity の docstring 参照)。効くプローブと
+    効かないプローブを見極めるのも結果のうち。
+    """
+    vals = []
+    for _ in range(n_samples):
+        H, _ = anderson3d_hamiltonian(L, disorder_W, rng)
+        E, V = np.linalg.eigh(H)
+        mid = np.argsort(np.abs(E - mu))[:n_states]
+        p = np.abs(V[:, mid]) ** 2
+        ipr = np.sum(p ** 2, axis=0) / np.sum(p, axis=0) ** 2
+        vals.append(float(np.mean(ipr)) * (L ** 3))
+    return float(np.mean(vals))
+
+
 def one_dimension_has_no_mobility_edge():
     """
     正直な否定的事実の記録: 1次元では任意の乱れ W>0 で**全ての**固有状態が局在し、

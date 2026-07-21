@@ -79,7 +79,7 @@ def electronic_heat_capacity(dos_at_mu, T):
     return sommerfeld_heat_capacity_coefficient(dos_at_mu) * T
 
 
-def kubo_dc_conductivity(hamiltonian, mu=0.0, kT=0.05, eta=0.15):
+def kubo_dc_conductivity(hamiltonian, mu=0.0, kT=0.05, eta=0.15, positions=None):
     """
     【v0.86: 乱れ×輸送】久保-Greenwood の DC 伝導度を、**kappalogic の検出器を
     2つとも使って**実空間ハミルトニアンから直接計算する(並進対称性は不要なので
@@ -115,11 +115,27 @@ def kubo_dc_conductivity(hamiltonian, mu=0.0, kT=0.05, eta=0.15):
     物理的に正しい振る舞い。また σ の絶対値は任意単位(e²/ħ 等の前因子は付けて
     いない)——意味があるのは乱れ依存性と ζ との比例関係の方。η を極端に小さく
     すると有限系の離散準位が拾えなくなるので、準位間隔程度に取ること。
+
+    **3D Anderson 転移のプローブとしては使えない(v0.87 の否定的知見)**:
+    厳密対角化できる範囲(L<=10、N<=1000)では、本関数の σ は転移の有限サイズ
+    signature を出さない。η を固定すると L 増で準位間隔が詰まり η 内の準位対が
+    増えるだけの人工効果が支配し(W によらず σ が L とともに増える)、逆に
+    η を準位間隔に比例させると η 内の準位対が激減して統計ノイズに埋もれる
+    (最も局在した W=30 が「金属的」と出るなど物理的に誤った結果になった)。
+    3D 転移を見るには転送行列の Λ(命題39、disorder.transfer_matrix_lambda)か
+    IPR×N(disorder.ipr_times_n_3d)を使うこと。σ が有効なのは、本 docstring
+    冒頭で示した**1次元での乱れ依存性と ζ との比例**のような用途。
+
+    positions: 各サイトの座標(電流の向きに対応する成分)。既定 None なら
+    1次元鎖とみなして arange(N) を使う。**3D 等では x 座標を明示的に渡すこと**
+    (格子の平坦インデックスをそのまま座標に使うのは誤り)。
     """
     H = np.asarray(hamiltonian, dtype=float)
     N = H.shape[0]
     E, V = np.linalg.eigh(H)
-    X = (V.T * np.arange(N, dtype=float)) @ V        # <i|x|j>
+    pos = np.arange(N, dtype=float) if positions is None \
+        else np.asarray(positions, dtype=float)
+    X = (V.T * pos) @ V                              # <i|x|j>
     dE = E[None, :] - E[:, None]
     v2 = (dE ** 2) * np.abs(X) ** 2                  # |v_ij|^2
     np.fill_diagonal(v2, 0.0)
