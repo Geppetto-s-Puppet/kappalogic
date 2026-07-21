@@ -72,3 +72,41 @@ def test_tree_fold_matches_naive_and_fused_for_single_clear_winner():
     xi = 0.01
     vals = [2.0, 0.01, -0.02, 0.03]  # one clearly-true element
     assert or_n_tree_fold(vals, xi) > 0.99
+
+
+def test_tree_fold_is_order_robust_vs_sequential():
+    # v0.75: in the pure-accumulation regime (no single L_k >= t*, sum > t*),
+    # SUM should fire.  descending sequential ~ best; but for the WORST order
+    # (ascending) the tree fold is far more robust than sequential.
+    rng = np.random.default_rng(3)
+    xi = 0.1
+    from kappalogic import or_n_kicked_map_unstable_point
+    tstar = or_n_kicked_map_unstable_point(xi)
+
+    def L(v):
+        return 2 * np.log(np.cosh(np.asarray(v, float) / xi))
+
+    seq_desc = seq_asc = tree_asc = got = 0
+    tries = 0
+    while got < 1500 and tries < 2_000_000:
+        tries += 1
+        n = rng.integers(4, 12)
+        Ls = L(rng.normal(0, rng.uniform(0.3, 1.0), n))
+        if Ls.max() >= tstar or Ls.sum() <= tstar:
+            continue
+        got += 1
+        vals = Ls  # already the L-values; feed as pseudo-inputs via a_k s.t. L=Ls
+        # reconstruct a_k with the given L (a = xi*arccosh(exp(L/2)))
+        a = xi * np.arccosh(np.exp(Ls / 2))
+        desc = np.sort(a)[::-1]
+        asc = np.sort(a)
+        seq_desc += _naive_fold(desc, xi) > 0.5
+        seq_asc += _naive_fold(asc, xi) > 0.5
+        tree_asc += or_n_tree_fold(list(asc), xi) > 0.5
+    assert got > 500
+    # descending sequential recovers SUM well
+    assert seq_desc / got > 0.8
+    # worst-order robustness: tree(ascending) >> sequential(ascending)
+    assert tree_asc / got > 0.55
+    assert seq_asc / got < 0.35
+    assert tree_asc > 2 * seq_asc
